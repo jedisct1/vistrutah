@@ -1,0 +1,29 @@
+# Makefile for final Vistrutah implementation
+
+CC = clang
+CFLAGS = -O3 -march=armv8-a+crypto -Wall -Wextra
+LDFLAGS = 
+
+# Source files
+SRCS = vistrutah_common.c vistrutah_final.c
+OBJS = $(SRCS:.c=.o)
+
+# Target
+TARGET = vistrutah_final
+
+# Build rules
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+run: $(TARGET)
+	./$(TARGET)
+
+clean:
+	rm -f $(OBJS) $(TARGET)
+
+.PHONY: all run clean

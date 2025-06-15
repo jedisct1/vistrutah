@@ -6,7 +6,11 @@
 #ifdef VISTRUTAH_ARM
 
 // External declarations
-extern const uint8_t ROUND_CONSTANTS[38];
+extern const uint8_t ROUND_CONSTANTS[256];
+
+// Forward declarations from vistrutah.c
+extern uint8x16_t aes_round(uint8x16_t state, uint8x16_t round_key);
+extern uint8x16_t aes_final_round(uint8x16_t state, uint8x16_t round_key);
 
 // Vistrutah-512 mixing layer using transpose operations
 static void vistrutah_512_mix(vistrutah_512_state_t* state) {

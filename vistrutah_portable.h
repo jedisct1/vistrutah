@@ -7,7 +7,9 @@
 
 // CPU feature detection
 #if defined(__x86_64__) || defined(_M_X64)
-    #define VISTRUTAH_INTEL
+    #ifndef VISTRUTAH_INTEL
+        #define VISTRUTAH_INTEL
+    #endif
     #include <immintrin.h>
     
     // Check for AVX512 and VAES support
@@ -19,7 +21,9 @@
         #define VISTRUTAH_VAES
     #endif
 #elif defined(__aarch64__) || defined(_M_ARM64)
-    #define VISTRUTAH_ARM
+    #ifndef VISTRUTAH_ARM
+        #define VISTRUTAH_ARM
+    #endif
     #include <arm_neon.h>
     #include <arm_acle.h>
 #else

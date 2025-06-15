@@ -7,7 +7,7 @@ COMMON_FLAGS = -O3 -Wall -Wextra -std=c11
 # Architecture-specific flags
 ifeq ($(ARCH),arm64)
     CFLAGS = $(COMMON_FLAGS) -march=armv8-a+crypto -DVISTRUTAH_ARM
-    SOURCES = vistrutah.c vistrutah_512.c vistrutah_common.c
+    SOURCES = vistrutah.c vistrutah_common.c
 else ifeq ($(ARCH),x86_64)
     # Detect CPU features
     HAS_AVX512 := $(shell gcc -march=native -dM -E - < /dev/null | grep -c AVX512F)

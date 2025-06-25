@@ -195,7 +195,7 @@ static void vistrutah_256_key_expansion_intel(const uint8_t* key, int key_size,
 void vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
                           const uint8_t* key, int key_size, int rounds) {
     vistrutah_256_state_t state;
-    vistrutah_key_schedule_t ks;
+    vistrutah_key_schedule_t ks = {0};
     
     // Key expansion
     vistrutah_256_key_expansion_intel(key, key_size, &ks, rounds);

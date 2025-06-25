@@ -13,12 +13,16 @@
     #include <immintrin.h>
     
     // Check for AVX512 and VAES support
-    #ifdef __AVX512F__
-        #define VISTRUTAH_AVX512
+    #ifndef VISTRUTAH_AVX512
+        #ifdef __AVX512F__
+            #define VISTRUTAH_AVX512
+        #endif
     #endif
     
-    #ifdef __VAES__
-        #define VISTRUTAH_VAES
+    #ifndef VISTRUTAH_VAES
+        #ifdef __VAES__
+            #define VISTRUTAH_VAES
+        #endif
     #endif
 #elif defined(__aarch64__) || defined(_M_ARM64)
     #ifndef VISTRUTAH_ARM

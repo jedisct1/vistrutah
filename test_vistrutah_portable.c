@@ -121,79 +121,214 @@ void test_vistrutah_512() {
     }
 }
 
-// Test vectors from specification (if available)
-void test_official_vectors() {
-    printf("\n=== Official Test Vectors ===\n");
+// Comprehensive test vectors for all cipher variants
+void test_comprehensive_vectors() {
+    printf("\n=== Comprehensive Test Vectors ===\n");
     
     // Vistrutah-256 test vectors
     struct {
         uint8_t key[32];
+        int key_size;
         uint8_t plaintext[32];
-        uint8_t expected[32];
         int rounds;
         const char* description;
     } vistrutah256_vectors[] = {
-        // Test vector 1: All zeros
+        // Test vector 1: All zeros, 128-bit key, short rounds
         {
             {0}, // key
+            16,  // key_size
             {0}, // plaintext
-            {0}, // expected (to be computed)
-            VISTRUTAH_256_ROUNDS_LONG,
-            "All zeros"
+            VISTRUTAH_256_ROUNDS_SHORT,
+            "All zeros, 128-bit key, 10 rounds"
         },
-        // Test vector 2: Sequential bytes
+        // Test vector 2: All zeros, 256-bit key, long rounds
+        {
+            {0}, // key
+            32,  // key_size
+            {0}, // plaintext
+            VISTRUTAH_256_ROUNDS_LONG,
+            "All zeros, 256-bit key, 14 rounds"
+        },
+        // Test vector 3: Sequential bytes, 256-bit key
         {
             {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
              0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
              0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
              0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f},
+            32, // key_size
             {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
              0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
              0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
              0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10},
-            {0}, // expected (to be computed)
             VISTRUTAH_256_ROUNDS_LONG,
-            "Sequential pattern"
+            "Sequential pattern, 256-bit key, 14 rounds"
         },
-        // Test vector 3: All ones
+        // Test vector 4: All ones, 256-bit key
         {
             {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+            32, // key_size
             {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-            {0}, // expected (to be computed)
             VISTRUTAH_256_ROUNDS_LONG,
-            "All ones"
+            "All ones, 256-bit key, 14 rounds"
+        },
+        // Test vector 5: Random-like pattern
+        {
+            {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+             0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c,
+             0x76, 0x2e, 0x71, 0x60, 0xf3, 0x8b, 0x4d, 0xa5,
+             0x6a, 0x78, 0x4d, 0x90, 0x45, 0x19, 0x0c, 0xfe},
+            32, // key_size
+            {0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d,
+             0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34,
+             0x4a, 0x40, 0x93, 0x82, 0x22, 0x99, 0xf3, 0x1d,
+             0x00, 0x82, 0xef, 0xa9, 0x8e, 0xc4, 0xe6, 0xc8},
+            VISTRUTAH_256_ROUNDS_SHORT,
+            "Random-like pattern, 256-bit key, 10 rounds"
         }
     };
     
-    printf("\nVistrutah-256 vectors:\n");
+    // Vistrutah-512 test vectors
+    struct {
+        uint8_t key[64];
+        int key_size;
+        uint8_t plaintext[64];
+        int rounds;
+        const char* description;
+    } vistrutah512_vectors[] = {
+        // Test vector 1: All zeros, 256-bit key, short rounds
+        {
+            {0}, // key
+            32,  // key_size
+            {0}, // plaintext
+            VISTRUTAH_512_ROUNDS_SHORT_256KEY,
+            "All zeros, 256-bit key, 10 rounds"
+        },
+        // Test vector 2: All zeros, 256-bit key, long rounds
+        {
+            {0}, // key
+            32,  // key_size
+            {0}, // plaintext
+            VISTRUTAH_512_ROUNDS_LONG_256KEY,
+            "All zeros, 256-bit key, 14 rounds"
+        },
+        // Test vector 3: All zeros, 512-bit key, short rounds
+        {
+            {0}, // key
+            64,  // key_size
+            {0}, // plaintext
+            VISTRUTAH_512_ROUNDS_SHORT_512KEY,
+            "All zeros, 512-bit key, 12 rounds"
+        },
+        // Test vector 4: All zeros, 512-bit key, long rounds
+        {
+            {0}, // key
+            64,  // key_size
+            {0}, // plaintext
+            VISTRUTAH_512_ROUNDS_LONG_512KEY,
+            "All zeros, 512-bit key, 18 rounds"
+        },
+        // Test vector 5: Sequential pattern, 256-bit key
+        {
+            {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+             0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+             0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+             0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f},
+            32, // key_size
+            {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+             0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
+             0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+             0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
+             0x0f, 0x1e, 0x2d, 0x3c, 0x4b, 0x5a, 0x69, 0x78,
+             0x87, 0x96, 0xa5, 0xb4, 0xc3, 0xd2, 0xe1, 0xf0,
+             0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0,
+             0xed, 0xcb, 0xa9, 0x87, 0x65, 0x43, 0x21, 0x0f},
+            VISTRUTAH_512_ROUNDS_LONG_256KEY,
+            "Sequential pattern, 256-bit key, 14 rounds"
+        },
+        // Test vector 6: Full 512-bit key with pattern
+        {
+            // Generate full 512-bit key pattern
+            {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+             0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+             0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+             0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+             0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+             0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+             0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+             0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f},
+            64, // key_size
+            {0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
+             0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+             0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
+             0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+             0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87,
+             0x78, 0x69, 0x5a, 0x4b, 0x3c, 0x2d, 0x1e, 0x0f,
+             0x0f, 0x1e, 0x2d, 0x3c, 0x4b, 0x5a, 0x69, 0x78,
+             0x87, 0x96, 0xa5, 0xb4, 0xc3, 0xd2, 0xe1, 0xf0},
+            VISTRUTAH_512_ROUNDS_LONG_512KEY,
+            "Full pattern, 512-bit key, 18 rounds"
+        }
+    };
+    
+    printf("\n=== Vistrutah-256 Test Vectors ===\n");
     for (size_t i = 0; i < sizeof(vistrutah256_vectors)/sizeof(vistrutah256_vectors[0]); i++) {
         uint8_t output[32];
         uint8_t decrypted[32];
         
-        printf("\nTest %zu: %s\n", i+1, vistrutah256_vectors[i].description);
-        print_hex("Key      ", vistrutah256_vectors[i].key, 32);
+        printf("\nVector %zu: %s\n", i+1, vistrutah256_vectors[i].description);
+        print_hex("Key      ", vistrutah256_vectors[i].key, vistrutah256_vectors[i].key_size);
         print_hex("Plaintext", vistrutah256_vectors[i].plaintext, 32);
         
         vistrutah_256_encrypt(vistrutah256_vectors[i].plaintext, output, 
-                             vistrutah256_vectors[i].key, 32, 
+                             vistrutah256_vectors[i].key, vistrutah256_vectors[i].key_size, 
                              vistrutah256_vectors[i].rounds);
         print_hex("Ciphertext", output, 32);
         
         // Verify decryption
         vistrutah_256_decrypt(output, decrypted, 
-                             vistrutah256_vectors[i].key, 32, 
+                             vistrutah256_vectors[i].key, vistrutah256_vectors[i].key_size, 
                              vistrutah256_vectors[i].rounds);
         
         if (memcmp(vistrutah256_vectors[i].plaintext, decrypted, 32) == 0) {
-            printf("✓ Decryption verified\n");
+            printf("✓ Encrypt/Decrypt verified\n");
         } else {
-            printf("✗ Decryption FAILED\n");
+            printf("✗ Encrypt/Decrypt FAILED\n");
+            print_hex("Expected ", vistrutah256_vectors[i].plaintext, 32);
+            print_hex("Got      ", decrypted, 32);
+        }
+    }
+    
+    printf("\n=== Vistrutah-512 Test Vectors ===\n");
+    for (size_t i = 0; i < sizeof(vistrutah512_vectors)/sizeof(vistrutah512_vectors[0]); i++) {
+        uint8_t output[64];
+        uint8_t decrypted[64];
+        
+        printf("\nVector %zu: %s\n", i+1, vistrutah512_vectors[i].description);
+        print_hex("Key      ", vistrutah512_vectors[i].key, vistrutah512_vectors[i].key_size);
+        print_hex("Plaintext", vistrutah512_vectors[i].plaintext, 64);
+        
+        vistrutah_512_encrypt(vistrutah512_vectors[i].plaintext, output, 
+                             vistrutah512_vectors[i].key, vistrutah512_vectors[i].key_size, 
+                             vistrutah512_vectors[i].rounds);
+        print_hex("Ciphertext", output, 64);
+        
+        // Verify decryption
+        vistrutah_512_decrypt(output, decrypted, 
+                             vistrutah512_vectors[i].key, vistrutah512_vectors[i].key_size, 
+                             vistrutah512_vectors[i].rounds);
+        
+        if (memcmp(vistrutah512_vectors[i].plaintext, decrypted, 64) == 0) {
+            printf("✓ Encrypt/Decrypt verified\n");
+        } else {
+            printf("✗ Encrypt/Decrypt FAILED\n");
+            print_hex("Expected ", vistrutah512_vectors[i].plaintext, 64);
+            print_hex("Got      ", decrypted, 64);
         }
     }
 }
@@ -436,8 +571,8 @@ int main() {
     test_vistrutah_256();
     test_vistrutah_512();
     
-    // Test vectors
-    test_official_vectors();
+    // Comprehensive test vectors for all cipher variants
+    test_comprehensive_vectors();
     
     // Cryptographic property tests
     test_avalanche();

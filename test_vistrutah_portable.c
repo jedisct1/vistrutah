@@ -87,6 +87,7 @@ void test_vistrutah_512() {
         plaintext[i] = (i * 17) & 0xff;
     }
     
+    
     uint8_t ciphertext[64];
     uint8_t decrypted[64];
     

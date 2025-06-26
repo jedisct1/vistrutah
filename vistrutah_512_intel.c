@@ -258,12 +258,14 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
             
             __m512i rk = _mm512_broadcast_i32x4(ks.round_keys[round_idx]);
             
+            // Remove round key first
+            state.state = _mm512_xor_si512(state.state, rk);
+            
             if (is_last_round) {
-                // Last round of encryption was final round (no MixColumns)
-                state.state = _mm512_aesdeclast_epi128(state.state, rk);
+                // Inverse of final round
+                state.state = _mm512_aesdeclast_epi128(state.state, _mm512_setzero_si512());
             } else {
-                // Regular inverse round - match ARM order: InvMixColumns then InvSubBytes+InvShiftRows
-                // AVX512 doesn't have _mm512_aesimc_epi128, need to do it manually
+                // Regular inverse round
                 __m128i t0 = _mm512_extracti32x4_epi32(state.state, 0);
                 __m128i t1 = _mm512_extracti32x4_epi32(state.state, 1);
                 __m128i t2 = _mm512_extracti32x4_epi32(state.state, 2);
@@ -276,8 +278,7 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
                 state.state = _mm512_inserti32x4(state.state, t1, 1);
                 state.state = _mm512_inserti32x4(state.state, t2, 2);
                 state.state = _mm512_inserti32x4(state.state, t3, 3);
-                // Then InvSubBytes+InvShiftRows
-                state.state = _mm512_aesdeclast_epi128(state.state, rk);
+                state.state = _mm512_aesdeclast_epi128(state.state, _mm512_setzero_si512());
             }
         }
     }
@@ -333,22 +334,28 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
             
             bool is_last_round = (round_idx == rounds) && (rounds % ROUNDS_PER_STEP == 0);
             
+            // Remove round key first
+            s0 = _mm_xor_si128(s0, ks.round_keys[round_idx]);
+            s1 = _mm_xor_si128(s1, ks.round_keys[round_idx]);
+            s2 = _mm_xor_si128(s2, ks.round_keys[round_idx]);
+            s3 = _mm_xor_si128(s3, ks.round_keys[round_idx]);
+            
             if (is_last_round) {
-                // Last round of encryption was final round (no MixColumns)
-                s0 = _mm_aesdeclast_si128(s0, ks.round_keys[round_idx]);
-                s1 = _mm_aesdeclast_si128(s1, ks.round_keys[round_idx]);
-                s2 = _mm_aesdeclast_si128(s2, ks.round_keys[round_idx]);
-                s3 = _mm_aesdeclast_si128(s3, ks.round_keys[round_idx]);
+                // Inverse of final round
+                s0 = _mm_aesdeclast_si128(s0, _mm_setzero_si128());
+                s1 = _mm_aesdeclast_si128(s1, _mm_setzero_si128());
+                s2 = _mm_aesdeclast_si128(s2, _mm_setzero_si128());
+                s3 = _mm_aesdeclast_si128(s3, _mm_setzero_si128());
             } else {
-                // Regular inverse round - match ARM order: InvMixColumns then InvSubBytes+InvShiftRows
+                // Regular inverse round
                 s0 = _mm_aesimc_si128(s0);
                 s1 = _mm_aesimc_si128(s1);
                 s2 = _mm_aesimc_si128(s2);
                 s3 = _mm_aesimc_si128(s3);
-                s0 = _mm_aesdeclast_si128(s0, ks.round_keys[round_idx]);
-                s1 = _mm_aesdeclast_si128(s1, ks.round_keys[round_idx]);
-                s2 = _mm_aesdeclast_si128(s2, ks.round_keys[round_idx]);
-                s3 = _mm_aesdeclast_si128(s3, ks.round_keys[round_idx]);
+                s0 = _mm_aesdeclast_si128(s0, _mm_setzero_si128());
+                s1 = _mm_aesdeclast_si128(s1, _mm_setzero_si128());
+                s2 = _mm_aesdeclast_si128(s2, _mm_setzero_si128());
+                s3 = _mm_aesdeclast_si128(s3, _mm_setzero_si128());
             }
         }
     }

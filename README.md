@@ -1,7 +1,6 @@
 # Vistrutah Block Cipher Implementation
 
-This is a portable C implementation of the Vistrutah large block cipher with optimized versions for:
-- **ARM64**: Using NEON intrinsics with crypto extensions (Apple Silicon, ARM servers)
+This is a C implementation of the Vistrutah large block cipher optimized for:
 - **x86-64**: Using AES-NI, AVX2, AVX512, and VAES instructions (Intel/AMD processors)
 
 ## Overview
@@ -15,9 +14,7 @@ Vistrutah is a block cipher with 256-bit and 512-bit block sizes that uses AES r
 
 ## Features
 
-- **Multi-architecture support**: Automatically detects and uses the best available instructions
-- **ARM64**: NEON SIMD with crypto extensions (ARMv8-A+crypto)
-- **Intel x86-64**: 
+- **Intel x86-64 support**: Automatically detects and uses the best available instructions
   - SSE + AES-NI (baseline)
   - AVX2 + AES-NI (improved parallelism)
   - AVX512 + VAES (maximum performance on newest CPUs)
@@ -32,10 +29,6 @@ Vistrutah is a block cipher with 256-bit and 512-bit block sizes that uses AES r
 - `test_vistrutah_portable.c` - Portable test suite
 - `benchmark_portable.c` - Performance benchmarks
 - `Makefile` - Multi-architecture build configuration
-
-### ARM64 implementation
-- `vistrutah.c` - ARM NEON implementation for Vistrutah-256
-- `vistrutah_512.c` - ARM NEON implementation for Vistrutah-512
 
 ### Intel x86-64 implementation
 - `vistrutah_intel.c` - Intel implementation for Vistrutah-256
@@ -107,13 +100,6 @@ The implementation uses an inline key schedule with alternating fixed and variab
 
 ### CPU Instructions Used
 
-#### ARM64 (NEON + Crypto)
-- `vaeseq_u8` - AES single round encryption (SubBytes + ShiftRows)
-- `vaesmcq_u8` - AES Mix Columns
-- `vaesdq_u8` - AES single round decryption (InvSubBytes + InvShiftRows)
-- `vaesimcq_u8` - AES Inverse Mix Columns
-- `vtrnq_u8/u16/u32` - Transpose operations for Vistrutah-512 mixing
-
 #### Intel x86-64
 - `_mm_aesenc_si128` - AES single round encryption
 - `_mm_aesenclast_si128` - AES last round encryption
@@ -133,16 +119,7 @@ The inline key schedule minimizes key material exposure in memory, improving res
 
 ## Performance
 
-### ARM64 (Apple Silicon M-series)
-#### Vistrutah-256
-- **Long version (14 rounds)**: ~2146 MB/s (1.3 cycles/byte)
-- **Short version (10 rounds)**: ~3280 MB/s (0.9 cycles/byte)
-
-#### Vistrutah-512
-- **With 256-bit key (14 rounds)**: ~1195 MB/s (2.4 cycles/byte)
-- **With 512-bit key (18 rounds)**: ~912 MB/s (3.1 cycles/byte)
-
-### Intel x86-64 (Expected Performance)
+### Intel x86-64
 #### With AVX512+VAES
 - **Vistrutah-256**: ~3000-4000 MB/s
 - **Vistrutah-512**: ~2000-2500 MB/s

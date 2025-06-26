@@ -24,14 +24,8 @@
             #define VISTRUTAH_VAES
         #endif
     #endif
-#elif defined(__aarch64__) || defined(_M_ARM64)
-    #ifndef VISTRUTAH_ARM
-        #define VISTRUTAH_ARM
-    #endif
-    #include <arm_neon.h>
-    #include <arm_acle.h>
 #else
-    #error "Unsupported architecture"
+    #error "Unsupported architecture - only x86_64 is supported"
 #endif
 
 // Core constants
@@ -53,11 +47,7 @@
 #define VISTRUTAH_512_ROUNDS_LONG_512KEY 18
 
 // Portable vector types
-#ifdef VISTRUTAH_ARM
-    typedef uint8x16_t v128_t;
-    typedef struct { uint8x16_t val[2]; } v256_t;
-    typedef struct { uint8x16_t val[4]; } v512_t;
-#elif defined(VISTRUTAH_INTEL)
+#ifdef VISTRUTAH_INTEL
     typedef __m128i v128_t;
     typedef __m256i v256_t;
     typedef __m512i v512_t;
@@ -65,19 +55,11 @@
 
 // State structures
 typedef struct {
-    #ifdef VISTRUTAH_ARM
-        uint8x16_t slice[2];
-    #else
-        v256_t state;
-    #endif
+    v256_t state;
 } vistrutah_256_state_t;
 
 typedef struct {
-    #ifdef VISTRUTAH_ARM
-        uint8x16_t slice[4];
-    #else
-        v512_t state;
-    #endif
+    v512_t state;
 } vistrutah_512_state_t;
 
 // Key schedule structures

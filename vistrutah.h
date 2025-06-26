@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <arm_neon.h>
 
 // Core constants
 #define VISTRUTAH_256_BLOCK_SIZE 32  // 256 bits = 32 bytes
@@ -25,21 +24,21 @@
 
 // State structure for Vistrutah-256 (2 AES states)
 typedef struct {
-    uint8x16_t slice[2];
+    uint8_t slice[2][16];  // 2 x 128-bit blocks
 } vistrutah_256_state_t;
 
 // State structure for Vistrutah-512 (4 AES states)
 typedef struct {
-    uint8x16_t slice[4];
+    uint8_t slice[4][16];  // 4 x 128-bit blocks
 } vistrutah_512_state_t;
 
 // Key schedule structures
 typedef struct {
-    uint8x16_t round_keys[15];  // Max rounds for Vistrutah-256
+    uint8_t round_keys[15][16];  // Max rounds for Vistrutah-256
 } vistrutah_256_key_schedule_t;
 
 typedef struct {
-    uint8x16_t round_keys[19];  // Max rounds for Vistrutah-512
+    uint8_t round_keys[19][16];  // Max rounds for Vistrutah-512
 } vistrutah_512_key_schedule_t;
 
 // Function prototypes

@@ -41,7 +41,9 @@ static const uint8_t inv_sbox[256] = {
 };
 
 // Galois field multiplication by 2 (for MixColumns)
-static uint8_t gmul2(uint8_t a) {
+static uint8_t
+gmul2(uint8_t a)
+{
     if (a & 0x80) {
         return (a << 1) ^ 0x1b;
     } else {
@@ -50,27 +52,37 @@ static uint8_t gmul2(uint8_t a) {
 }
 
 // Galois field multiplication by 3 (for MixColumns)
-static uint8_t gmul3(uint8_t a) {
+static uint8_t
+gmul3(uint8_t a)
+{
     return gmul2(a) ^ a;
 }
 
 // Galois field multiplication by 9 (for InvMixColumns)
-static uint8_t gmul9(uint8_t a) {
+static uint8_t
+gmul9(uint8_t a)
+{
     return gmul2(gmul2(gmul2(a))) ^ a;
 }
 
 // Galois field multiplication by 11 (for InvMixColumns)
-static uint8_t gmul11(uint8_t a) {
+static uint8_t
+gmul11(uint8_t a)
+{
     return gmul2(gmul2(gmul2(a)) ^ a) ^ a;
 }
 
 // Galois field multiplication by 13 (for InvMixColumns)
-static uint8_t gmul13(uint8_t a) {
+static uint8_t
+gmul13(uint8_t a)
+{
     return gmul2(gmul2(gmul3(a))) ^ a;
 }
 
 // Galois field multiplication by 14 (for InvMixColumns)
-static uint8_t gmul14(uint8_t a) {
+static uint8_t
+gmul14(uint8_t a)
+{
     return gmul2(gmul2(gmul3(a)) ^ a);
 }
 
@@ -78,129 +90,149 @@ static uint8_t gmul14(uint8_t a) {
 extern const uint8_t ROUND_CONSTANTS[38];
 
 // CPU feature detection (portable version always returns false)
-bool vistrutah_has_aes_accel(void) {
+bool
+vistrutah_has_aes_accel(void)
+{
     return false;
 }
 
-const char* vistrutah_get_impl_name(void) {
+const char*
+vistrutah_get_impl_name(void)
+{
     return "Portable (no hardware acceleration)";
 }
 
 // Portable AES SubBytes operation
-static void aes_sub_bytes(uint8_t state[16]) {
+static void
+aes_sub_bytes(uint8_t state[16])
+{
     for (int i = 0; i < 16; i++) {
         state[i] = sbox[state[i]];
     }
 }
 
 // Portable AES InvSubBytes operation
-static void aes_inv_sub_bytes(uint8_t state[16]) {
+static void
+aes_inv_sub_bytes(uint8_t state[16])
+{
     for (int i = 0; i < 16; i++) {
         state[i] = inv_sbox[state[i]];
     }
 }
 
 // Portable AES ShiftRows operation
-static void aes_shift_rows(uint8_t state[16]) {
+static void
+aes_shift_rows(uint8_t state[16])
+{
     uint8_t temp;
-    
+
     // Row 1: shift left by 1
-    temp = state[1];
-    state[1] = state[5];
-    state[5] = state[9];
-    state[9] = state[13];
+    temp      = state[1];
+    state[1]  = state[5];
+    state[5]  = state[9];
+    state[9]  = state[13];
     state[13] = temp;
-    
+
     // Row 2: shift left by 2
-    temp = state[2];
-    state[2] = state[10];
+    temp      = state[2];
+    state[2]  = state[10];
     state[10] = temp;
-    temp = state[6];
-    state[6] = state[14];
+    temp      = state[6];
+    state[6]  = state[14];
     state[14] = temp;
-    
+
     // Row 3: shift left by 3
-    temp = state[3];
-    state[3] = state[15];
+    temp      = state[3];
+    state[3]  = state[15];
     state[15] = state[11];
     state[11] = state[7];
-    state[7] = temp;
+    state[7]  = temp;
 }
 
 // Portable AES InvShiftRows operation
-static void aes_inv_shift_rows(uint8_t state[16]) {
+static void
+aes_inv_shift_rows(uint8_t state[16])
+{
     uint8_t temp;
-    
+
     // Row 1: shift right by 1
-    temp = state[13];
+    temp      = state[13];
     state[13] = state[9];
-    state[9] = state[5];
-    state[5] = state[1];
-    state[1] = temp;
-    
+    state[9]  = state[5];
+    state[5]  = state[1];
+    state[1]  = temp;
+
     // Row 2: shift right by 2
-    temp = state[2];
-    state[2] = state[10];
+    temp      = state[2];
+    state[2]  = state[10];
     state[10] = temp;
-    temp = state[6];
-    state[6] = state[14];
+    temp      = state[6];
+    state[6]  = state[14];
     state[14] = temp;
-    
+
     // Row 3: shift right by 3
-    temp = state[7];
-    state[7] = state[11];
+    temp      = state[7];
+    state[7]  = state[11];
     state[11] = state[15];
     state[15] = state[3];
-    state[3] = temp;
+    state[3]  = temp;
 }
 
 // Portable AES MixColumns operation
-static void aes_mix_columns(uint8_t state[16]) {
+static void
+aes_mix_columns(uint8_t state[16])
+{
     uint8_t temp[16];
-    
+
     for (int i = 0; i < 4; i++) {
         uint8_t s0 = state[i * 4 + 0];
         uint8_t s1 = state[i * 4 + 1];
         uint8_t s2 = state[i * 4 + 2];
         uint8_t s3 = state[i * 4 + 3];
-        
+
         temp[i * 4 + 0] = gmul2(s0) ^ gmul3(s1) ^ s2 ^ s3;
         temp[i * 4 + 1] = s0 ^ gmul2(s1) ^ gmul3(s2) ^ s3;
         temp[i * 4 + 2] = s0 ^ s1 ^ gmul2(s2) ^ gmul3(s3);
         temp[i * 4 + 3] = gmul3(s0) ^ s1 ^ s2 ^ gmul2(s3);
     }
-    
+
     memcpy(state, temp, 16);
 }
 
 // Portable AES InvMixColumns operation
-static void aes_inv_mix_columns(uint8_t state[16]) {
+static void
+aes_inv_mix_columns(uint8_t state[16])
+{
     uint8_t temp[16];
-    
+
     for (int i = 0; i < 4; i++) {
         uint8_t s0 = state[i * 4 + 0];
         uint8_t s1 = state[i * 4 + 1];
         uint8_t s2 = state[i * 4 + 2];
         uint8_t s3 = state[i * 4 + 3];
-        
+
         temp[i * 4 + 0] = gmul14(s0) ^ gmul11(s1) ^ gmul13(s2) ^ gmul9(s3);
         temp[i * 4 + 1] = gmul9(s0) ^ gmul14(s1) ^ gmul11(s2) ^ gmul13(s3);
         temp[i * 4 + 2] = gmul13(s0) ^ gmul9(s1) ^ gmul14(s2) ^ gmul11(s3);
         temp[i * 4 + 3] = gmul11(s0) ^ gmul13(s1) ^ gmul9(s2) ^ gmul14(s3);
     }
-    
+
     memcpy(state, temp, 16);
 }
 
 // Portable AES AddRoundKey operation
-static void aes_add_round_key(uint8_t state[16], const uint8_t key[16]) {
+static void
+aes_add_round_key(uint8_t state[16], const uint8_t key[16])
+{
     for (int i = 0; i < 16; i++) {
         state[i] ^= key[i];
     }
 }
 
 // Portable AES round (equivalent to AES-NI _mm_aesenc_si128)
-static void aes_round(uint8_t state[16], const uint8_t round_key[16]) {
+static void
+aes_round(uint8_t state[16], const uint8_t round_key[16])
+{
     aes_sub_bytes(state);
     aes_shift_rows(state);
     aes_mix_columns(state);
@@ -208,58 +240,63 @@ static void aes_round(uint8_t state[16], const uint8_t round_key[16]) {
 }
 
 // Portable AES final round (equivalent to AES-NI _mm_aesenclast_si128)
-static void aes_final_round(uint8_t state[16], const uint8_t round_key[16]) {
+static void
+aes_final_round(uint8_t state[16], const uint8_t round_key[16])
+{
     aes_sub_bytes(state);
     aes_shift_rows(state);
     aes_add_round_key(state, round_key);
 }
 
-
 // Vistrutah-256 mixing layer for portable
-static void vistrutah_256_mix_portable(uint8_t state[32]) {
+static void
+vistrutah_256_mix_portable(uint8_t state[32])
+{
     uint8_t temp[32];
-    
+
     // ASURA mixing permutation
-    static const uint8_t MIXING_PERM_256[32] = {
-        0, 17, 2, 19, 4, 21, 6, 23, 8, 25, 10, 27, 12, 29, 14, 31,
-        16, 1, 18, 3, 20, 5, 22, 7, 24, 9, 26, 11, 28, 13, 30, 15
-    };
-    
+    static const uint8_t MIXING_PERM_256[32] = { 0,  17, 2,  19, 4,  21, 6,  23, 8,  25, 10,
+                                                 27, 12, 29, 14, 31, 16, 1,  18, 3,  20, 5,
+                                                 22, 7,  24, 9,  26, 11, 28, 13, 30, 15 };
+
     // Apply permutation
     for (int i = 0; i < 32; i++) {
         temp[i] = state[MIXING_PERM_256[i]];
     }
-    
+
     memcpy(state, temp, 32);
 }
 
 // Vistrutah-256 inverse mixing layer for portable
-static void vistrutah_256_inv_mix_portable(uint8_t state[32]) {
+static void
+vistrutah_256_inv_mix_portable(uint8_t state[32])
+{
     uint8_t temp[32];
-    
-    static const uint8_t MIXING_PERM_256[32] = {
-        0, 17, 2, 19, 4, 21, 6, 23, 8, 25, 10, 27, 12, 29, 14, 31,
-        16, 1, 18, 3, 20, 5, 22, 7, 24, 9, 26, 11, 28, 13, 30, 15
-    };
-    
+
+    static const uint8_t MIXING_PERM_256[32] = { 0,  17, 2,  19, 4,  21, 6,  23, 8,  25, 10,
+                                                 27, 12, 29, 14, 31, 16, 1,  18, 3,  20, 5,
+                                                 22, 7,  24, 9,  26, 11, 28, 13, 30, 15 };
+
     // Apply inverse permutation
     for (int i = 0; i < 32; i++) {
         temp[MIXING_PERM_256[i]] = state[i];
     }
-    
+
     memcpy(state, temp, 32);
 }
 
 // Vistrutah-512 mixing layer for portable
-static void vistrutah_512_mix_portable(uint8_t state[64]) {
-    uint8_t temp[64];
-    uint32_t* state32 = (uint32_t*)state;
-    uint32_t* temp32 = (uint32_t*)temp;
-    
+static void
+vistrutah_512_mix_portable(uint8_t state[64])
+{
+    uint8_t   temp[64];
+    uint32_t* state32 = (uint32_t*) state;
+    uint32_t* temp32  = (uint32_t*) temp;
+
     // 4x4 transpose of 32-bit elements (matching Intel implementation)
     // Each 128-bit block contains 4 x 32-bit elements
     // We need to transpose the 4x4 matrix of 32-bit elements
-    
+
     // Input layout (32-bit words):
     // Block 0: [0,  1,  2,  3 ]
     // Block 1: [4,  5,  6,  7 ]
@@ -271,26 +308,30 @@ static void vistrutah_512_mix_portable(uint8_t state[64]) {
     // Block 1: [1,  5,  9,  13]
     // Block 2: [2,  6,  10, 14]
     // Block 3: [3,  7,  11, 15]
-    
+
     for (int row = 0; row < 4; row++) {
         for (int col = 0; col < 4; col++) {
             temp32[row * 4 + col] = state32[col * 4 + row];
         }
     }
-    
+
     memcpy(state, temp, 64);
 }
 
 // Vistrutah-512 inverse mixing layer for portable (same as forward)
-static void vistrutah_512_inv_mix_portable(uint8_t state[64]) {
+static void
+vistrutah_512_inv_mix_portable(uint8_t state[64])
+{
     vistrutah_512_mix_portable(state);
 }
 
 // Key expansion for portable implementation
-static void vistrutah_key_expansion_portable(const uint8_t* key, int key_size,
-                                           uint8_t round_keys[][16], int rounds) {
+static void
+vistrutah_key_expansion_portable(const uint8_t* key, int key_size, uint8_t round_keys[][16],
+                                 int rounds)
+{
     uint8_t k0[16], k1[16];
-    
+
     if (key_size == 16) {
         memcpy(k0, key, 16);
         memcpy(k1, key, 16);
@@ -298,7 +339,7 @@ static void vistrutah_key_expansion_portable(const uint8_t* key, int key_size,
         memcpy(k0, key, 16);
         memcpy(k1, key + 16, 16);
     }
-    
+
     for (int i = 0; i <= rounds; i++) {
         if (i % 2 == 0) {
             // XOR k0 with round constant
@@ -317,21 +358,23 @@ static void vistrutah_key_expansion_portable(const uint8_t* key, int key_size,
 }
 
 // Vistrutah-256 encryption (portable)
-void vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
-                          const uint8_t* key, int key_size, int rounds) {
+void
+vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8_t* key,
+                      int key_size, int rounds)
+{
     uint8_t state[32];
     uint8_t round_keys[MAX_ROUNDS + 1][16];
-    
+
     // Initialize state
     memcpy(state, plaintext, 32);
-    
+
     // Key expansion
     vistrutah_key_expansion_portable(key, key_size, round_keys, rounds);
-    
+
     // Initial key addition
     aes_add_round_key(state, round_keys[0]);
     aes_add_round_key(state + 16, round_keys[0]);
-    
+
     // Process rounds
     for (int round = 1; round <= rounds; round++) {
         if (round == rounds) {
@@ -343,34 +386,36 @@ void vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
             aes_round(state, round_keys[round]);
             aes_round(state + 16, round_keys[round]);
         }
-        
+
         // Apply mixing layer after every 2 rounds (except last)
         if ((round % 2 == 0) && (round < rounds)) {
             vistrutah_256_mix_portable(state);
         }
     }
-    
+
     memcpy(ciphertext, state, 32);
 }
 
 // Vistrutah-256 decryption (portable)
-void vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
-                          const uint8_t* key, int key_size, int rounds) {
+void
+vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8_t* key,
+                      int key_size, int rounds)
+{
     uint8_t state[32];
     uint8_t round_keys[MAX_ROUNDS + 1][16];
-    
+
     // Initialize state
     memcpy(state, ciphertext, 32);
-    
+
     // Key expansion
     vistrutah_key_expansion_portable(key, key_size, round_keys, rounds);
-    
+
     // Process rounds in reverse - match Intel implementation exactly
     for (int round = rounds; round >= 1; round--) {
         // Remove round key first
         aes_add_round_key(state, round_keys[round]);
         aes_add_round_key(state + 16, round_keys[round]);
-        
+
         if (round == rounds) {
             // Inverse of final round (InvShiftRows + InvSubBytes only)
             aes_inv_shift_rows(state);
@@ -382,7 +427,7 @@ void vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
             if ((round % 2 == 0) && (round < rounds)) {
                 vistrutah_256_inv_mix_portable(state);
             }
-            
+
             // Regular inverse round (InvMixColumns + InvShiftRows + InvSubBytes)
             aes_inv_mix_columns(state);
             aes_inv_shift_rows(state);
@@ -392,19 +437,21 @@ void vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
             aes_inv_sub_bytes(state + 16);
         }
     }
-    
+
     // Remove initial round key
     aes_add_round_key(state, round_keys[0]);
     aes_add_round_key(state + 16, round_keys[0]);
-    
+
     memcpy(plaintext, state, 32);
 }
 
 // Key expansion for Vistrutah-512 (portable)
-static void vistrutah_512_key_expansion_portable(const uint8_t* key, int key_size,
-                                               uint8_t round_keys[][16], int rounds) {
+static void
+vistrutah_512_key_expansion_portable(const uint8_t* key, int key_size, uint8_t round_keys[][16],
+                                     int rounds)
+{
     uint8_t k0[16], k1[16];
-    
+
     if (key_size == 32) {
         memcpy(k0, key, 16);
         memcpy(k1, key + 16, 16);
@@ -412,7 +459,7 @@ static void vistrutah_512_key_expansion_portable(const uint8_t* key, int key_siz
         memcpy(k0, key, 16);
         memcpy(k1, key + 16, 16);
     }
-    
+
     // Generate round keys using alternating fixed and variable keys
     for (int i = 0; i <= rounds; i++) {
         if (i % 2 == 0) {
@@ -422,33 +469,43 @@ static void vistrutah_512_key_expansion_portable(const uint8_t* key, int key_siz
             // Variable round key (cyclic permutation of master key)
             int key_idx = (i / 2) % 4;
             switch (key_idx) {
-                case 0: memcpy(round_keys[i], k0, 16); break;
-                case 1: memcpy(round_keys[i], k1, 16); break;
-                case 2: memcpy(round_keys[i], k0, 16); break;  // For 256-bit key, k2 = k0
-                case 3: memcpy(round_keys[i], k1, 16); break;  // For 256-bit key, k3 = k1
+            case 0:
+                memcpy(round_keys[i], k0, 16);
+                break;
+            case 1:
+                memcpy(round_keys[i], k1, 16);
+                break;
+            case 2:
+                memcpy(round_keys[i], k0, 16);
+                break; // For 256-bit key, k2 = k0
+            case 3:
+                memcpy(round_keys[i], k1, 16);
+                break; // For 256-bit key, k3 = k1
             }
         }
     }
 }
 
 // Vistrutah-512 encryption (portable)
-void vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
-                          const uint8_t* key, int key_size, int rounds) {
+void
+vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8_t* key,
+                      int key_size, int rounds)
+{
     uint8_t state[64];
     uint8_t round_keys[MAX_ROUNDS + 1][16];
-    
+
     // Initialize state
     memcpy(state, plaintext, 64);
-    
+
     // Key expansion
     vistrutah_512_key_expansion_portable(key, key_size, round_keys, rounds);
-    
+
     // Initial key addition
     aes_add_round_key(state, round_keys[0]);
     aes_add_round_key(state + 16, round_keys[0]);
     aes_add_round_key(state + 32, round_keys[0]);
     aes_add_round_key(state + 48, round_keys[0]);
-    
+
     // Main rounds
     int round_idx = 1;
     for (int step = 0; step < rounds / ROUNDS_PER_STEP; step++) {
@@ -469,13 +526,13 @@ void vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
             }
             round_idx++;
         }
-        
+
         // Apply mixing layer (except after last step)
         if (step < (rounds / ROUNDS_PER_STEP) - 1) {
             vistrutah_512_mix_portable(state);
         }
     }
-    
+
     // Handle odd number of rounds
     if (rounds % ROUNDS_PER_STEP == 1) {
         aes_final_round(state, round_keys[rounds]);
@@ -483,22 +540,24 @@ void vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
         aes_final_round(state + 32, round_keys[rounds]);
         aes_final_round(state + 48, round_keys[rounds]);
     }
-    
+
     memcpy(ciphertext, state, 64);
 }
 
 // Vistrutah-512 decryption (portable)
-void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
-                          const uint8_t* key, int key_size, int rounds) {
+void
+vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8_t* key,
+                      int key_size, int rounds)
+{
     uint8_t state[64];
     uint8_t round_keys[MAX_ROUNDS + 1][16];
-    
+
     // Initialize state
     memcpy(state, ciphertext, 64);
-    
+
     // Key expansion
     vistrutah_512_key_expansion_portable(key, key_size, round_keys, rounds);
-    
+
     // Handle odd rounds at the end if necessary
     int round_idx = rounds;
     if (rounds % ROUNDS_PER_STEP == 1) {
@@ -507,7 +566,7 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
         aes_add_round_key(state + 16, round_keys[round_idx]);
         aes_add_round_key(state + 32, round_keys[round_idx]);
         aes_add_round_key(state + 48, round_keys[round_idx]);
-        
+
         // Inverse of final round (InvShiftRows + InvSubBytes only)
         aes_inv_shift_rows(state);
         aes_inv_sub_bytes(state);
@@ -519,29 +578,30 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
         aes_inv_sub_bytes(state + 48);
         round_idx--;
     }
-    
+
     // Main rounds (in reverse), processing in steps of 2 rounds
     for (int step = (rounds / ROUNDS_PER_STEP) - 1; step >= 0; step--) {
         // Apply inverse mixing layer BEFORE processing rounds (except for last step)
         if (step < (rounds / ROUNDS_PER_STEP) - 1) {
             vistrutah_512_inv_mix_portable(state);
         }
-        
+
         // Two AES rounds per step (in reverse order)
         for (int r = ROUNDS_PER_STEP - 1; r >= 0; r--) {
             round_idx = step * ROUNDS_PER_STEP + r + 1;
-            
+
             // Skip if we've gone past the total rounds
-            if (round_idx > rounds) continue;
-            
+            if (round_idx > rounds)
+                continue;
+
             bool is_last_round = (round_idx == rounds) && (rounds % ROUNDS_PER_STEP == 0);
-            
+
             // Remove round key first
             aes_add_round_key(state, round_keys[round_idx]);
             aes_add_round_key(state + 16, round_keys[round_idx]);
             aes_add_round_key(state + 32, round_keys[round_idx]);
             aes_add_round_key(state + 48, round_keys[round_idx]);
-            
+
             if (is_last_round) {
                 // Inverse of final round (InvShiftRows + InvSubBytes only)
                 aes_inv_shift_rows(state);
@@ -569,12 +629,12 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
             }
         }
     }
-    
+
     // Final key addition (round 0)
     aes_add_round_key(state, round_keys[0]);
     aes_add_round_key(state + 16, round_keys[0]);
     aes_add_round_key(state + 32, round_keys[0]);
     aes_add_round_key(state + 48, round_keys[0]);
-    
+
     memcpy(plaintext, state, 64);
 }

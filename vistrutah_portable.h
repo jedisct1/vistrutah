@@ -24,8 +24,11 @@
             #define VISTRUTAH_VAES
         #endif
     #endif
-#else
-    #error "Unsupported architecture - only x86_64 is supported"
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+    #ifndef VISTRUTAH_ARM
+        #define VISTRUTAH_ARM
+    #endif
+    #include <arm_neon.h>
 #endif
 
 // Core constants
@@ -51,6 +54,16 @@
     typedef __m128i v128_t;
     typedef __m256i v256_t;
     typedef __m512i v512_t;
+#elif defined(VISTRUTAH_ARM)
+    typedef uint8x16_t v128_t;
+    // ARM doesn't have native 256/512-bit vectors, so we use structs
+    typedef struct { uint8x16_t val[2]; } v256_t;
+    typedef struct { uint8x16_t val[4]; } v512_t;
+#else
+    // Fallback for portable implementation
+    typedef struct { uint8_t bytes[16]; } v128_t;
+    typedef struct { uint8_t bytes[32]; } v256_t;
+    typedef struct { uint8_t bytes[64]; } v512_t;
 #endif
 
 // State structures

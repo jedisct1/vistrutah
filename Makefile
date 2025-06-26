@@ -32,8 +32,24 @@ else
         ifeq ($(HAS_VAES),1)
             CFLAGS += -DVISTRUTAH_VAES
         endif
+    else ifeq ($(ARCH),arm64)
+        # ARM64 architecture
+        CFLAGS = $(COMMON_FLAGS) -march=armv8-a+crypto -DVISTRUTAH_ARM
+        SOURCES = vistrutah_arm.c vistrutah_512_arm.c vistrutah_common.c
+        TEST_EXEC_SUFFIX = 
+        BENCH_EXEC_SUFFIX = 
+    else ifeq ($(ARCH),aarch64)
+        # Alternative name for ARM64
+        CFLAGS = $(COMMON_FLAGS) -march=armv8-a+crypto -DVISTRUTAH_ARM
+        SOURCES = vistrutah_arm.c vistrutah_512_arm.c vistrutah_common.c
+        TEST_EXEC_SUFFIX = 
+        BENCH_EXEC_SUFFIX = 
     else
-        $(echo Unsupported architecture: $(ARCH). Only x86_64 is supported)
+        $(info Unsupported architecture: $(ARCH). Using portable implementation)
+        CFLAGS = $(COMMON_FLAGS)
+        SOURCES = vistrutah_portable.c vistrutah_common.c
+        TEST_EXEC_SUFFIX = _portable
+        BENCH_EXEC_SUFFIX = _portable
     endif
 endif
 

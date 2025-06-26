@@ -2,6 +2,7 @@
 
 This is a C implementation of the Vistrutah large block cipher optimized for:
 - **x86-64**: Using AES-NI, AVX2, AVX512, and VAES instructions (Intel/AMD processors)
+- **ARM64**: Using NEON and ARM Crypto Extensions (ARMv8-A+crypto)
 
 ## Overview
 
@@ -18,6 +19,9 @@ Vistrutah is a block cipher with 256-bit and 512-bit block sizes that uses AES r
   - SSE + AES-NI (baseline)
   - AVX2 + AES-NI (improved parallelism)
   - AVX512 + VAES (maximum performance on newest CPUs)
+- **ARM64 support**: Uses ARM Crypto Extensions for hardware-accelerated AES
+  - NEON SIMD for parallel processing
+  - Hardware AES instructions (AESE/AESD)
 - Implements both encryption and decryption
 - Supports both long (full security) and short (for modes like HCTR2) versions
 
@@ -33,6 +37,10 @@ Vistrutah is a block cipher with 256-bit and 512-bit block sizes that uses AES r
 ### Intel x86-64 implementation
 - `vistrutah_intel.c` - Intel implementation for Vistrutah-256
 - `vistrutah_512_intel.c` - Intel implementation for Vistrutah-512
+
+### ARM64 implementation
+- `vistrutah_arm.c` - ARM implementation for Vistrutah-256
+- `vistrutah_512_arm.c` - ARM implementation for Vistrutah-512
 
 ## Building
 
@@ -108,6 +116,14 @@ The implementation uses an inline key schedule with alternating fixed and variab
 - `_mm_aesimc_si128` - AES Inverse Mix Columns
 - `_mm512_aesenc_epi128` - AVX512+VAES: 4 parallel AES rounds
 - `_mm512_permutexvar_epi32` - AVX512: Efficient permutations
+
+#### ARM64
+- `vaeseq_u8` - AES single round encryption
+- `vaesmcq_u8` - AES Mix Columns
+- `vaesdq_u8` - AES single round decryption
+- `vaesimcq_u8` - AES Inverse Mix Columns
+- `vqtbl2q_u8` - NEON table lookup for ASURA permutation
+- `vtrnq_u32` - NEON transpose for mixing layer
 
 ## Security Notes
 

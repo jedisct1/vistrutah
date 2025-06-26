@@ -39,65 +39,49 @@ const char* vistrutah_get_impl_name(void) {
 #ifdef VISTRUTAH_VAES
 
 // AVX512+VAES: Process 4 AES blocks in parallel
-// Match ARM behavior: AES with zero key, then XOR with actual key
+// Optimized: Pass round key directly to AES instruction
 static inline __m512i aes_round_x4(__m512i state, __m512i round_key) {
-    // AES round with zero key
-    state = _mm512_aesenc_epi128(state, _mm512_setzero_si512());
-    // Then XOR with actual round key
-    return _mm512_xor_si512(state, round_key);
+    // AES round with round key directly
+    return _mm512_aesenc_epi128(state, round_key);
 }
 
 static inline __m512i aes_final_round_x4(__m512i state, __m512i round_key) {
-    // AES final round with zero key (no MixColumns)
-    state = _mm512_aesenclast_epi128(state, _mm512_setzero_si512());
-    // Then XOR with actual round key
-    return _mm512_xor_si512(state, round_key);
+    // AES final round with round key directly (no MixColumns)
+    return _mm512_aesenclast_epi128(state, round_key);
 }
 
 static inline __m512i aes_inv_round_x4(__m512i state, __m512i round_key) {
-    // First XOR with round key
-    state = _mm512_xor_si512(state, round_key);
-    // Then inverse AES round with zero key
-    return _mm512_aesdec_epi128(state, _mm512_setzero_si512());
+    // Inverse AES round - XOR happens after in AES-NI
+    return _mm512_aesdec_epi128(state, round_key);
 }
 
 static inline __m512i aes_inv_final_round_x4(__m512i state, __m512i round_key) {
-    // First XOR with round key
-    state = _mm512_xor_si512(state, round_key);
-    // Then inverse AES final round with zero key
-    return _mm512_aesdeclast_epi128(state, _mm512_setzero_si512());
+    // Inverse AES final round with round key directly
+    return _mm512_aesdeclast_epi128(state, round_key);
 }
 
 #else
 
 // Regular AES-NI: Process 1 or 2 blocks
-// Match ARM behavior: AES with zero key, then XOR with actual key
+// Optimized: Pass round key directly to AES instruction
 static inline __m128i aes_round(__m128i state, __m128i round_key) {
-    // AES round with zero key
-    state = _mm_aesenc_si128(state, _mm_setzero_si128());
-    // Then XOR with actual round key
-    return _mm_xor_si128(state, round_key);
+    // AES round with round key directly
+    return _mm_aesenc_si128(state, round_key);
 }
 
 static inline __m128i aes_final_round(__m128i state, __m128i round_key) {
-    // AES final round with zero key (no MixColumns)
-    state = _mm_aesenclast_si128(state, _mm_setzero_si128());
-    // Then XOR with actual round key
-    return _mm_xor_si128(state, round_key);
+    // AES final round with round key directly (no MixColumns)
+    return _mm_aesenclast_si128(state, round_key);
 }
 
 static inline __m128i aes_inv_round(__m128i state, __m128i round_key) {
-    // First XOR with round key
-    state = _mm_xor_si128(state, round_key);
-    // Then inverse AES round with zero key
-    return _mm_aesdec_si128(state, _mm_setzero_si128());
+    // Inverse AES round - XOR happens after in AES-NI
+    return _mm_aesdec_si128(state, round_key);
 }
 
 static inline __m128i aes_inv_final_round(__m128i state, __m128i round_key) {
-    // First XOR with round key
-    state = _mm_xor_si128(state, round_key);
-    // Then inverse AES final round with zero key
-    return _mm_aesdeclast_si128(state, _mm_setzero_si128());
+    // Inverse AES final round with round key directly
+    return _mm_aesdeclast_si128(state, round_key);
 }
 
 // Process 2 blocks in parallel using AVX2
@@ -219,8 +203,7 @@ void vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
         
         if (round == rounds) {
             // Final round (no MixColumns)
-            state512 = _mm512_aesenclast_epi128(state512, _mm512_setzero_si512());
-            state512 = _mm512_xor_si512(state512, rk512);
+            state512 = aes_final_round_x4(state512, rk512);
         } else {
             // Regular round
             state512 = aes_round_x4(state512, rk512);
@@ -279,10 +262,8 @@ void vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext,
     for (int round = 1; round <= rounds; round++) {
         if (round == rounds) {
             // Final round (no MixColumns)
-            s0 = _mm_aesenc_si128(s0, _mm_setzero_si128());
-            s1 = _mm_aesenc_si128(s1, _mm_setzero_si128());
-            s0 = _mm_xor_si128(s0, ks.round_keys[round]);
-            s1 = _mm_xor_si128(s1, ks.round_keys[round]);
+            s0 = _mm_aesenclast_si128(s0, ks.round_keys[round]);
+            s1 = _mm_aesenclast_si128(s1, ks.round_keys[round]);
         } else {
             // Regular round - use helper function that matches ARM behavior
             s0 = aes_round(s0, ks.round_keys[round]);

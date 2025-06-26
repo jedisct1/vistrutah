@@ -63,14 +63,20 @@ static void
 vistrutah_512_key_expansion_intel(const uint8_t* key, int key_size, vistrutah_key_schedule_t* ks,
                                   int rounds)
 {
-    __m128i k0, k1;
+    __m128i k0, k1, k2, k3;
 
     if (key_size == 32) {
+        // 256-bit key: use k0, k1 and repeat them for k2, k3
         k0 = _mm_loadu_si128((const __m128i*) key);
         k1 = _mm_loadu_si128((const __m128i*) (key + 16));
+        k2 = k0;
+        k3 = k1;
     } else {
+        // 512-bit key: use all 4 segments
         k0 = _mm_loadu_si128((const __m128i*) key);
         k1 = _mm_loadu_si128((const __m128i*) (key + 16));
+        k2 = _mm_loadu_si128((const __m128i*) (key + 32));
+        k3 = _mm_loadu_si128((const __m128i*) (key + 48));
     }
 
     // Generate round keys using alternating fixed and variable keys
@@ -89,11 +95,11 @@ vistrutah_512_key_expansion_intel(const uint8_t* key, int key_size, vistrutah_ke
                 ks->round_keys[i] = k1;
                 break;
             case 2:
-                ks->round_keys[i] = k0;
-                break; // For 256-bit key, k2 = k0
+                ks->round_keys[i] = k2;
+                break;
             case 3:
-                ks->round_keys[i] = k1;
-                break; // For 256-bit key, k3 = k1
+                ks->round_keys[i] = k3;
+                break;
             }
         }
     }

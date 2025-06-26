@@ -450,14 +450,20 @@ static void
 vistrutah_512_key_expansion_portable(const uint8_t* key, int key_size, uint8_t round_keys[][16],
                                      int rounds)
 {
-    uint8_t k0[16], k1[16];
+    uint8_t k0[16], k1[16], k2[16], k3[16];
 
     if (key_size == 32) {
+        // 256-bit key: use k0, k1 and repeat them for k2, k3
         memcpy(k0, key, 16);
         memcpy(k1, key + 16, 16);
+        memcpy(k2, k0, 16);
+        memcpy(k3, k1, 16);
     } else {
+        // 512-bit key: use all 4 segments
         memcpy(k0, key, 16);
         memcpy(k1, key + 16, 16);
+        memcpy(k2, key + 32, 16);
+        memcpy(k3, key + 48, 16);
     }
 
     // Generate round keys using alternating fixed and variable keys
@@ -476,11 +482,11 @@ vistrutah_512_key_expansion_portable(const uint8_t* key, int key_size, uint8_t r
                 memcpy(round_keys[i], k1, 16);
                 break;
             case 2:
-                memcpy(round_keys[i], k0, 16);
-                break; // For 256-bit key, k2 = k0
+                memcpy(round_keys[i], k2, 16);
+                break;
             case 3:
-                memcpy(round_keys[i], k1, 16);
-                break; // For 256-bit key, k3 = k1
+                memcpy(round_keys[i], k3, 16);
+                break;
             }
         }
     }

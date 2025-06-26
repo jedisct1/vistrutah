@@ -103,42 +103,47 @@ aes_inv_final_round_x4(__m512i state, __m512i round_key)
 
 #    endif
 
-// Vistrutah-256 mixing layer for Intel
+// Vistrutah-256 mixing layer for Intel - optimized SIMD implementation
 static void
 vistrutah_256_mix_intel(vistrutah_256_state_t* state)
 {
-    uint8_t  temp[32] __attribute__((aligned(32)));
-    uint8_t* state_bytes = (uint8_t*) state;
-
-    // ASURA mixing permutation
-    static const uint8_t MIXING_PERM_256[32] = { 0,  17, 2,  19, 4,  21, 6,  23, 8,  25, 10,
-                                                 27, 12, 29, 14, 31, 16, 1,  18, 3,  20, 5,
-                                                 22, 7,  24, 9,  26, 11, 28, 13, 30, 15 };
-
-    // Apply permutation
-    for (int i = 0; i < 32; i++) {
-        temp[i] = state_bytes[MIXING_PERM_256[i]];
-    }
-
-    memcpy(state_bytes, temp, 32);
+    // The mixing permutation can be efficiently implemented using SSSE3 pshufb
+    // Pattern: first half gets even bytes from s0 and odd bytes from s1
+    //          second half gets even bytes from s1 and odd bytes from s0
+    
+    __m128i s0 = _mm_loadu_si128((const __m128i*) state);
+    __m128i s1 = _mm_loadu_si128((const __m128i*) ((uint8_t*) state + 16));
+    
+    // Shuffle masks for pshufb
+    // For first output half: take bytes 0,2,4,6,8,10,12,14 from s0
+    const __m128i shuf0_even = _mm_set_epi8(-1, 14, -1, 12, -1, 10, -1, 8, -1, 6, -1, 4, -1, 2, -1, 0);
+    // For first output half: take bytes 1,3,5,7,9,11,13,15 from s1  
+    const __m128i shuf1_odd = _mm_set_epi8(15, -1, 13, -1, 11, -1, 9, -1, 7, -1, 5, -1, 3, -1, 1, -1);
+    
+    // For second output half: take bytes 0,2,4,6,8,10,12,14 from s1
+    const __m128i shuf1_even = shuf0_even;
+    // For second output half: take bytes 1,3,5,7,9,11,13,15 from s0
+    const __m128i shuf0_odd = shuf1_odd;
+    
+    // Apply shuffles
+    __m128i r0_even = _mm_shuffle_epi8(s0, shuf0_even);
+    __m128i r0_odd  = _mm_shuffle_epi8(s1, shuf1_odd);
+    __m128i r1_even = _mm_shuffle_epi8(s1, shuf1_even);
+    __m128i r1_odd  = _mm_shuffle_epi8(s0, shuf0_odd);
+    
+    // Combine with OR (since we used -1 for unused positions)
+    __m128i result0 = _mm_or_si128(r0_even, r0_odd);
+    __m128i result1 = _mm_or_si128(r1_even, r1_odd);
+    
+    _mm_storeu_si128((__m128i*) state, result0);
+    _mm_storeu_si128((__m128i*) ((uint8_t*) state + 16), result1);
 }
 
 static void
 vistrutah_256_inv_mix_intel(vistrutah_256_state_t* state)
 {
-    uint8_t  temp[32] __attribute__((aligned(32)));
-    uint8_t* state_bytes = (uint8_t*) state;
-
-    static const uint8_t MIXING_PERM_256[32] = { 0,  17, 2,  19, 4,  21, 6,  23, 8,  25, 10,
-                                                 27, 12, 29, 14, 31, 16, 1,  18, 3,  20, 5,
-                                                 22, 7,  24, 9,  26, 11, 28, 13, 30, 15 };
-
-    // Apply inverse permutation
-    for (int i = 0; i < 32; i++) {
-        temp[MIXING_PERM_256[i]] = state_bytes[i];
-    }
-
-    memcpy(state_bytes, temp, 32);
+    // The mixing permutation is self-inverse, so we can reuse the forward function
+    vistrutah_256_mix_intel(state);
 }
 
 // Key expansion

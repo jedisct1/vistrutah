@@ -143,6 +143,22 @@ aes_final_round_x2(__m256i state, __m256i round_key)
 static void
 vistrutah_256_mix_intel(vistrutah_256_state_t* state)
 {
+#ifdef __AVX2__
+    // The mixing permutation crosses 128-bit lanes, making SIMD optimization complex
+    // Using scalar implementation for now
+    uint8_t  temp[32] __attribute__((aligned(32)));
+    uint8_t* state_bytes = (uint8_t*) state;
+
+    static const uint8_t MIXING_PERM_256[32] = { 0,  17, 2,  19, 4,  21, 6,  23, 8,  25, 10,
+                                                 27, 12, 29, 14, 31, 16, 1,  18, 3,  20, 5,
+                                                 22, 7,  24, 9,  26, 11, 28, 13, 30, 15 };
+
+    for (int i = 0; i < 32; i++) {
+        temp[i] = state_bytes[MIXING_PERM_256[i]];
+    }
+
+    memcpy(state_bytes, temp, 32);
+#else
     uint8_t  temp[32] __attribute__((aligned(32)));
     uint8_t* state_bytes = (uint8_t*) state;
 
@@ -157,6 +173,7 @@ vistrutah_256_mix_intel(vistrutah_256_state_t* state)
     }
 
     memcpy(state_bytes, temp, 32);
+#endif
 }
 
 static void
@@ -215,43 +232,44 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
     vistrutah_256_key_expansion_intel(key, key_size, &ks, rounds);
 
 #    if defined(VISTRUTAH_VAES)
-    // AVX512+VAES implementation - process 2 blocks in parallel
-    // We'll use the lower 256 bits of AVX512 vectors
-    uint8_t temp_buffer[64] __attribute__((aligned(64)));
-    memcpy(temp_buffer, plaintext, 32);
-    memset(temp_buffer + 32, 0, 32);
+    // AVX512+VAES implementation - use AVX2 path for single block
+    // The VAES instructions work on 512-bit registers but we only have 256 bits
+    // So we fall back to AVX2 which is more efficient for this case
+    
+    // Load 256-bit state
+    state.state = _mm256_loadu_si256((const __m256i*) plaintext);
 
-    __m512i state512 = _mm512_loadu_si512(temp_buffer);
+    // Initial key addition
+    __m256i rk  = _mm256_set_m128i(ks.round_keys[0], ks.round_keys[0]);
+    state.state = _mm256_xor_si256(state.state, rk);
 
-    // Initial key addition - broadcast 128-bit key to all 4 slots
-    __m512i rk512 = _mm512_broadcast_i32x4(ks.round_keys[0]);
-    state512      = _mm512_xor_si512(state512, rk512);
-
-    // Process rounds - match ARM implementation
+    // Process rounds
     for (int round = 1; round <= rounds; round++) {
-        rk512 = _mm512_broadcast_i32x4(ks.round_keys[round]);
+        // Extract the two 128-bit halves
+        __m128i s0 = _mm256_extracti128_si256(state.state, 0);
+        __m128i s1 = _mm256_extracti128_si256(state.state, 1);
+        __m128i rk128 = ks.round_keys[round];
 
         if (round == rounds) {
             // Final round (no MixColumns)
-            state512 = aes_final_round_x4(state512, rk512);
+            s0 = _mm_aesenclast_si128(s0, rk128);
+            s1 = _mm_aesenclast_si128(s1, rk128);
         } else {
             // Regular round
-            state512 = aes_round_x4(state512, rk512);
+            s0 = _mm_aesenc_si128(s0, rk128);
+            s1 = _mm_aesenc_si128(s1, rk128);
         }
+        
+        // Combine back
+        state.state = _mm256_set_m128i(s1, s0);
 
         // Apply mixing layer after every 2 rounds (except last)
         if ((round % 2 == 0) && (round < rounds)) {
-            _mm512_storeu_si512(temp_buffer, state512);
-            memcpy(&state, temp_buffer, 32);
             vistrutah_256_mix_intel(&state);
-            memcpy(temp_buffer, &state, 32);
-            state512 = _mm512_loadu_si512(temp_buffer);
         }
     }
 
-    // Store only lower 256 bits
-    _mm512_storeu_si512(temp_buffer, state512);
-    memcpy(ciphertext, temp_buffer, 32);
+    _mm256_storeu_si256((__m256i*) ciphertext, state.state);
 #    elif defined(__AVX2__)
     // Load 256-bit state
     state.state = _mm256_loadu_si256((const __m256i*) plaintext);
@@ -326,7 +344,52 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     // Key expansion
     vistrutah_256_key_expansion_intel(key, key_size, &ks, rounds);
 
-    // Load ciphertext
+#if defined(VISTRUTAH_VAES) || defined(__AVX2__)
+    // Load 256-bit state
+    state.state = _mm256_loadu_si256((const __m256i*) ciphertext);
+    
+    // Process rounds in reverse
+    for (int round = rounds; round >= 1; round--) {
+        // Extract the two 128-bit halves
+        __m128i s0 = _mm256_extracti128_si256(state.state, 0);
+        __m128i s1 = _mm256_extracti128_si256(state.state, 1);
+        __m128i rk128 = ks.round_keys[round];
+        
+        // Remove round key first
+        s0 = _mm_xor_si128(s0, rk128);
+        s1 = _mm_xor_si128(s1, rk128);
+
+        if (round == rounds) {
+            // Inverse of final round
+            s0 = _mm_aesdeclast_si128(s0, _mm_setzero_si128());
+            s1 = _mm_aesdeclast_si128(s1, _mm_setzero_si128());
+        } else {
+            // Apply inverse mixing layer before the appropriate rounds
+            if ((round % 2 == 0) && (round < rounds)) {
+                state.state = _mm256_set_m128i(s1, s0);
+                vistrutah_256_inv_mix_intel(&state);
+                s0 = _mm256_extracti128_si256(state.state, 0);
+                s1 = _mm256_extracti128_si256(state.state, 1);
+            }
+
+            // Regular inverse round
+            s0 = _mm_aesimc_si128(s0);
+            s1 = _mm_aesimc_si128(s1);
+            s0 = _mm_aesdeclast_si128(s0, _mm_setzero_si128());
+            s1 = _mm_aesdeclast_si128(s1, _mm_setzero_si128());
+        }
+        
+        // Combine back
+        state.state = _mm256_set_m128i(s1, s0);
+    }
+
+    // Remove initial round key
+    __m256i rk  = _mm256_set_m128i(ks.round_keys[0], ks.round_keys[0]);
+    state.state = _mm256_xor_si256(state.state, rk);
+    
+    _mm256_storeu_si256((__m256i*) plaintext, state.state);
+#else
+    // SSE implementation
     __m128i s0 = _mm_loadu_si128((const __m128i*) ciphertext);
     __m128i s1 = _mm_loadu_si128((const __m128i*) (ciphertext + 16));
 
@@ -364,6 +427,7 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
 
     _mm_storeu_si128((__m128i*) plaintext, s0);
     _mm_storeu_si128((__m128i*) (plaintext + 16), s1);
+#endif
 }
 
 #endif // VISTRUTAH_INTEL

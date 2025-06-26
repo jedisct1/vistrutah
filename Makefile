@@ -16,8 +16,11 @@ else ifeq ($(ARCH),x86_64)
     CFLAGS = $(COMMON_FLAGS) -march=native -DVISTRUTAH_INTEL
     SOURCES = vistrutah_intel.c vistrutah_512_intel.c vistrutah_common.c
     
-    ifeq ($(HAS_AVX512),1)
-        CFLAGS += -DVISTRUTAH_AVX512
+    # Allow disabling AVX-512 for testing
+    ifndef NO_AVX512
+        ifeq ($(HAS_AVX512),1)
+            CFLAGS += -DVISTRUTAH_AVX512
+        endif
     endif
     
     ifeq ($(HAS_VAES),1)

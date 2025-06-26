@@ -33,7 +33,7 @@ else
             CFLAGS += -DVISTRUTAH_VAES
         endif
     else
-        $(error Unsupported architecture: $(ARCH). Only x86_64 is supported)
+        $(echo Unsupported architecture: $(ARCH). Only x86_64 is supported)
     endif
 endif
 

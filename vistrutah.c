@@ -1,4 +1,4 @@
-// Vistrutah Block Cipher - Fixed implementation for Apple Silicon
+// Vistrutah Block Cipher - Apple Silicon implementation
 // Corrected mixing layer and decryption logic
 
 #include "vistrutah_portable.h"
@@ -15,7 +15,7 @@ bool vistrutah_has_aes_accel(void) {
 }
 
 const char* vistrutah_get_impl_name(void) {
-    return "Apple Silicon ARM64+NEON+Crypto (Fixed)";
+    return "Apple Silicon ARM64+NEON+Crypto";
 }
 
 // External round constants

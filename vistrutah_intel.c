@@ -69,7 +69,7 @@ mixing_layer_256(__m128i* s0, __m128i* s1)
 
     uint8_t result[32];
     for (int i = 0; i < 16; i++) {
-        result[i] = temp[2 * i];
+        result[i]      = temp[2 * i];
         result[16 + i] = temp[2 * i + 1];
     }
 
@@ -86,7 +86,7 @@ inv_mixing_layer_256(__m128i* s0, __m128i* s1)
 
     uint8_t result[32];
     for (int i = 0; i < 16; i++) {
-        result[2 * i] = temp[i];
+        result[2 * i]     = temp[i];
         result[2 * i + 1] = temp[16 + i];
     }
 
@@ -126,10 +126,10 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
     memcpy(round_key, fixed_key + 16, 16);
     memcpy(round_key + 16, fixed_key, 16);
 
-    __m128i fk0 = _mm_loadu_si128((const __m128i*) fixed_key);
-    __m128i fk1 = _mm_loadu_si128((const __m128i*) (fixed_key + 16));
-    __m128i rk0 = _mm_loadu_si128((const __m128i*) round_key);
-    __m128i rk1 = _mm_loadu_si128((const __m128i*) (round_key + 16));
+    __m128i fk0  = _mm_loadu_si128((const __m128i*) fixed_key);
+    __m128i fk1  = _mm_loadu_si128((const __m128i*) (fixed_key + 16));
+    __m128i rk0  = _mm_loadu_si128((const __m128i*) round_key);
+    __m128i rk1  = _mm_loadu_si128((const __m128i*) (round_key + 16));
     __m128i zero = _mm_setzero_si128();
 
     s0 = _mm_xor_si128(s0, rk0);
@@ -152,7 +152,7 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         s1 = _mm_xor_si128(s1, rk1);
 
         __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = _mm_xor_si128(s0, rc);
+        s0         = _mm_xor_si128(s0, rc);
 
         s0 = aes_round(s0, fk0);
         s1 = aes_round(s1, fk1);
@@ -223,7 +223,7 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         s1 = aes_inv_final_round(s1, rk1);
 
         __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = _mm_xor_si128(s0, rc);
+        s0         = _mm_xor_si128(s0, rc);
 
         inv_mixing_layer_256(&s0, &s1);
 

@@ -36,7 +36,7 @@ mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 
     uint8_t result[64];
     for (int i = 0; i < 16; i++) {
-        result[i] = temp[4 * i];
+        result[i]      = temp[4 * i];
         result[16 + i] = temp[4 * i + 1];
         result[32 + i] = temp[4 * i + 2];
         result[48 + i] = temp[4 * i + 3];
@@ -59,7 +59,7 @@ inv_mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t*
 
     uint8_t result[64];
     for (int i = 0; i < 16; i++) {
-        result[4 * i] = temp[i];
+        result[4 * i]     = temp[i];
         result[4 * i + 1] = temp[16 + i];
         result[4 * i + 2] = temp[32 + i];
         result[4 * i + 3] = temp[48 + i];
@@ -104,10 +104,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
     memcpy(round_key + 32, fixed_key + 48, 16);
     memcpy(round_key + 48, fixed_key + 32, 16);
 
-    uint8x16_t fk0 = vld1q_u8(fixed_key);
-    uint8x16_t fk1 = vld1q_u8(fixed_key + 16);
-    uint8x16_t fk2 = vld1q_u8(fixed_key + 32);
-    uint8x16_t fk3 = vld1q_u8(fixed_key + 48);
+    uint8x16_t fk0  = vld1q_u8(fixed_key);
+    uint8x16_t fk1  = vld1q_u8(fixed_key + 16);
+    uint8x16_t fk2  = vld1q_u8(fixed_key + 32);
+    uint8x16_t fk3  = vld1q_u8(fixed_key + 48);
     uint8x16_t zero = vmovq_n_u8(0);
 
     uint8x16_t rk0 = vld1q_u8(round_key);
@@ -149,7 +149,7 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         s3 = veorq_u8(s3, rk3);
 
         uint8x16_t rc = vld1q_u8(&ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = veorq_u8(s0, rc);
+        s0            = veorq_u8(s0, rc);
 
         s0 = AES_ENC(s0, fk0);
         s1 = AES_ENC(s1, fk1);
@@ -258,7 +258,7 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         s3 = AES_DEC_LAST(s3, rk3);
 
         uint8x16_t rc = vld1q_u8(&ROUND_CONSTANTS[16 * (steps - i - 1)]);
-        s0 = veorq_u8(s0, rc);
+        s0            = veorq_u8(s0, rc);
 
         inv_mixing_layer_512(&s0, &s1, &s2, &s3);
 

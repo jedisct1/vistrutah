@@ -39,7 +39,7 @@ mixing_layer_256(uint8x16_t* s0, uint8x16_t* s1)
 
     uint8_t result[32];
     for (int i = 0; i < 16; i++) {
-        result[i] = temp[2 * i];
+        result[i]      = temp[2 * i];
         result[16 + i] = temp[2 * i + 1];
     }
 
@@ -56,7 +56,7 @@ inv_mixing_layer_256(uint8x16_t* s0, uint8x16_t* s1)
 
     uint8_t result[32];
     for (int i = 0; i < 16; i++) {
-        result[2 * i] = temp[i];
+        result[2 * i]     = temp[i];
         result[2 * i + 1] = temp[16 + i];
     }
 
@@ -96,10 +96,10 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
     memcpy(round_key, fixed_key + 16, 16);
     memcpy(round_key + 16, fixed_key, 16);
 
-    uint8x16_t fk0 = vld1q_u8(fixed_key);
-    uint8x16_t fk1 = vld1q_u8(fixed_key + 16);
-    uint8x16_t rk0 = vld1q_u8(round_key);
-    uint8x16_t rk1 = vld1q_u8(round_key + 16);
+    uint8x16_t fk0  = vld1q_u8(fixed_key);
+    uint8x16_t fk1  = vld1q_u8(fixed_key + 16);
+    uint8x16_t rk0  = vld1q_u8(round_key);
+    uint8x16_t rk1  = vld1q_u8(round_key + 16);
     uint8x16_t zero = vmovq_n_u8(0);
 
     s0 = veorq_u8(s0, rk0);
@@ -122,7 +122,7 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         s1 = veorq_u8(s1, rk1);
 
         uint8x16_t rc = vld1q_u8(&ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = veorq_u8(s0, rc);
+        s0            = veorq_u8(s0, rc);
 
         s0 = AES_ENC(s0, fk0);
         s1 = AES_ENC(s1, fk1);
@@ -194,7 +194,7 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         s1 = AES_DEC_LAST(s1, rk1);
 
         uint8x16_t rc = vld1q_u8(&ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = veorq_u8(s0, rc);
+        s0            = veorq_u8(s0, rc);
 
         inv_mixing_layer_256(&s0, &s1);
 

@@ -62,10 +62,9 @@ const uint8_t VISTRUTAH_P4_INV[16] = { 4, 8, 9, 6, 11, 7, 12, 1, 15, 0, 5, 14, 1
 const uint8_t VISTRUTAH_P5_INV[16] = { 6, 2, 12, 7, 5, 13, 10, 11, 1, 3, 9, 15, 0, 14, 8, 4 };
 
 // Key expansion shuffle permutation for Vistrutah-512
-const uint8_t VISTRUTAH_KEXP_SHUFFLE[32] = {
-    30, 29, 8,  23, 10, 9,  20, 3,  22, 21, 0,  31, 2,  1,  28, 11,
-    14, 13, 24, 7,  26, 25, 4,  19, 6,  5,  16, 15, 18, 17, 12, 27
-};
+const uint8_t VISTRUTAH_KEXP_SHUFFLE[32] = { 30, 29, 8, 23, 10, 9,  20, 3,  22, 21, 0,
+                                             31, 2,  1, 28, 11, 14, 13, 24, 7,  26, 25,
+                                             4,  19, 6, 5,  16, 15, 18, 17, 12, 27 };
 
 // Zero constant for AES rounds
 const uint8_t VISTRUTAH_ZERO[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

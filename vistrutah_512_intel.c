@@ -44,7 +44,7 @@ mixing_layer_512(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 
     uint8_t result[64];
     for (int i = 0; i < 16; i++) {
-        result[i] = temp[4 * i];
+        result[i]      = temp[4 * i];
         result[16 + i] = temp[4 * i + 1];
         result[32 + i] = temp[4 * i + 2];
         result[48 + i] = temp[4 * i + 3];
@@ -67,7 +67,7 @@ inv_mixing_layer_512(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 
     uint8_t result[64];
     for (int i = 0; i < 16; i++) {
-        result[4 * i] = temp[i];
+        result[4 * i]     = temp[i];
         result[4 * i + 1] = temp[16 + i];
         result[4 * i + 2] = temp[32 + i];
         result[4 * i + 3] = temp[48 + i];
@@ -122,10 +122,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
     memcpy(round_key + 32, fixed_key + 48, 16);
     memcpy(round_key + 48, fixed_key + 32, 16);
 
-    __m128i fk0 = _mm_loadu_si128((const __m128i*) fixed_key);
-    __m128i fk1 = _mm_loadu_si128((const __m128i*) (fixed_key + 16));
-    __m128i fk2 = _mm_loadu_si128((const __m128i*) (fixed_key + 32));
-    __m128i fk3 = _mm_loadu_si128((const __m128i*) (fixed_key + 48));
+    __m128i fk0  = _mm_loadu_si128((const __m128i*) fixed_key);
+    __m128i fk1  = _mm_loadu_si128((const __m128i*) (fixed_key + 16));
+    __m128i fk2  = _mm_loadu_si128((const __m128i*) (fixed_key + 32));
+    __m128i fk3  = _mm_loadu_si128((const __m128i*) (fixed_key + 48));
     __m128i zero = _mm_setzero_si128();
 
     __m128i rk0 = _mm_loadu_si128((const __m128i*) round_key);
@@ -167,7 +167,7 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         s3 = _mm_xor_si128(s3, rk3);
 
         __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = _mm_xor_si128(s0, rc);
+        s0         = _mm_xor_si128(s0, rc);
 
         s0 = aes_round(s0, fk0);
         s1 = aes_round(s1, fk1);
@@ -275,7 +275,7 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         s3 = aes_inv_final_round(s3, rk3);
 
         __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = _mm_xor_si128(s0, rc);
+        s0         = _mm_xor_si128(s0, rc);
 
         inv_mixing_layer_512(&s0, &s1, &s2, &s3);
 

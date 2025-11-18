@@ -245,22 +245,13 @@ apply_permutation(const uint8_t* perm, uint8_t* data, int len)
 }
 
 static void
-rotate_bytes(uint8_t* data, int len, int n)
+rotate_bytes(uint8_t* data, int shift, int len)
 {
     uint8_t temp[64];
     memcpy(temp, data, len);
     for (int i = 0; i < len; i++) {
-        data[i] = temp[(i + n) % len];
+        data[i] = temp[(i + shift) % len];
     }
-}
-
-static void
-swap_16(uint8_t* a, uint8_t* b)
-{
-    uint8_t temp[16];
-    memcpy(temp, a, 16);
-    memcpy(a, b, 16);
-    memcpy(b, temp, 16);
 }
 
 static void
@@ -470,10 +461,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
 
         mixing_layer_512(state);
 
-        rotate_bytes(round_key, 16, 5);
-        rotate_bytes(round_key + 16, 16, 10);
-        rotate_bytes(round_key + 32, 16, 5);
-        rotate_bytes(round_key + 48, 16, 10);
+        rotate_bytes(round_key, 5, 16);
+        rotate_bytes(round_key + 16, 10, 16);
+        rotate_bytes(round_key + 32, 5, 16);
+        rotate_bytes(round_key + 48, 10, 16);
 
         for (int j = 0; j < 64; j++) {
             state[j] ^= round_key[j];
@@ -488,10 +479,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         aes_round(state + 48, fixed_key + 48);
     }
 
-    rotate_bytes(round_key, 16, 5);
-    rotate_bytes(round_key + 16, 16, 10);
-    rotate_bytes(round_key + 32, 16, 5);
-    rotate_bytes(round_key + 48, 16, 10);
+    rotate_bytes(round_key, 5, 16);
+    rotate_bytes(round_key + 16, 10, 16);
+    rotate_bytes(round_key + 32, 5, 16);
+    rotate_bytes(round_key + 48, 10, 16);
 
     aes_final_round(state, round_key);
     aes_final_round(state + 16, round_key + 16);
@@ -521,10 +512,10 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     memcpy(round_key + 32, fixed_key + 48, 16);
     memcpy(round_key + 48, fixed_key + 32, 16);
 
-    rotate_bytes(round_key, 16, (5 * steps) % 16);
-    rotate_bytes(round_key + 16, 16, (10 * steps) % 16);
-    rotate_bytes(round_key + 32, 16, (5 * steps) % 16);
-    rotate_bytes(round_key + 48, 16, (10 * steps) % 16);
+    rotate_bytes(round_key, (5 * steps) % 16, 16);
+    rotate_bytes(round_key + 16, (10 * steps) % 16, 16);
+    rotate_bytes(round_key + 32, (5 * steps) % 16, 16);
+    rotate_bytes(round_key + 48, (10 * steps) % 16, 16);
 
     aes_inv_mix_columns(fixed_key);
     aes_inv_mix_columns(fixed_key + 16);
@@ -541,10 +532,10 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     aes_dec_round(state + 48, fixed_key + 48);
 
     for (int i = 1; i < steps; i++) {
-        rotate_bytes(round_key, 16, 11);
-        rotate_bytes(round_key + 16, 16, 6);
-        rotate_bytes(round_key + 32, 16, 11);
-        rotate_bytes(round_key + 48, 16, 6);
+        rotate_bytes(round_key, 11, 16);
+        rotate_bytes(round_key + 16, 6, 16);
+        rotate_bytes(round_key + 32, 11, 16);
+        rotate_bytes(round_key + 48, 6, 16);
 
         aes_dec_final_round(state, round_key);
         aes_dec_final_round(state + 16, round_key + 16);
@@ -568,10 +559,10 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         aes_dec_round(state + 48, fixed_key + 48);
     }
 
-    rotate_bytes(round_key, 16, 11);
-    rotate_bytes(round_key + 16, 16, 6);
-    rotate_bytes(round_key + 32, 16, 11);
-    rotate_bytes(round_key + 48, 16, 6);
+    rotate_bytes(round_key, 11, 16);
+    rotate_bytes(round_key + 16, 6, 16);
+    rotate_bytes(round_key + 32, 11, 16);
+    rotate_bytes(round_key + 48, 6, 16);
 
     aes_dec_final_round(state, round_key);
     aes_dec_final_round(state + 16, round_key + 16);

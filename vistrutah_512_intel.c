@@ -9,14 +9,28 @@ extern const uint8_t ROUND_CONSTANTS[16 * 48];
 extern const uint8_t VISTRUTAH_KEXP_SHUFFLE[32];
 extern const uint8_t VISTRUTAH_ZERO[16];
 
-static void
-rotate_bytes(uint8_t* data, int shift, int len)
+static inline __m128i
+aes_round(__m128i state, __m128i round_key)
 {
-    uint8_t temp[16];
-    for (int i = 0; i < len; i++) {
-        temp[i] = data[(i + shift) % len];
-    }
-    memcpy(data, temp, len);
+    return _mm_aesenc_si128(state, round_key);
+}
+
+static inline __m128i
+aes_final_round(__m128i state, __m128i round_key)
+{
+    return _mm_aesenclast_si128(state, round_key);
+}
+
+static inline __m128i
+aes_inv_round(__m128i state, __m128i round_key)
+{
+    return _mm_aesdec_si128(state, round_key);
+}
+
+static inline __m128i
+aes_inv_final_round(__m128i state, __m128i round_key)
+{
+    return _mm_aesdeclast_si128(state, round_key);
 }
 
 static void
@@ -65,28 +79,14 @@ inv_mixing_layer_512(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
     *s3 = _mm_loadu_si128((const __m128i*) (result + 48));
 }
 
-static inline __m128i
-aes_round(__m128i state, __m128i round_key)
+static void
+rotate_bytes(uint8_t* data, int shift, int len)
 {
-    return _mm_aesenc_si128(state, round_key);
-}
-
-static inline __m128i
-aes_final_round(__m128i state, __m128i round_key)
-{
-    return _mm_aesenclast_si128(state, round_key);
-}
-
-static inline __m128i
-aes_inv_round(__m128i state, __m128i round_key)
-{
-    return _mm_aesdec_si128(state, round_key);
-}
-
-static inline __m128i
-aes_inv_final_round(__m128i state, __m128i round_key)
-{
-    return _mm_aesdeclast_si128(state, round_key);
+    uint8_t temp[16];
+    for (int i = 0; i < len; i++) {
+        temp[i] = data[(i + shift) % len];
+    }
+    memcpy(data, temp, len);
 }
 
 void
@@ -248,8 +248,6 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     __m128i fk1_imc = _mm_aesimc_si128(fk1);
     __m128i fk2_imc = _mm_aesimc_si128(fk2);
     __m128i fk3_imc = _mm_aesimc_si128(fk3);
-
-    __m128i zero = _mm_setzero_si128();
 
     __m128i rk0 = _mm_loadu_si128((const __m128i*) round_keys[steps]);
     __m128i rk1 = _mm_loadu_si128((const __m128i*) (round_keys[steps] + 16));

@@ -19,12 +19,7 @@ vistrutah_has_aes_accel(void)
     unsigned int eax, ebx, ecx, edx;
 
     if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
-        if (ecx & bit_AES) {
-#    ifdef VISTRUTAH_VAES
-            return true;
-#    endif
-            return true;
-        }
+        return (ecx & bit_AES) != 0;
     }
     return false;
 }
@@ -211,8 +206,6 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
 
     __m128i fk0_imc = _mm_aesimc_si128(fk0);
     __m128i fk1_imc = _mm_aesimc_si128(fk1);
-
-    __m128i zero = _mm_setzero_si128();
 
     __m128i rk0 = _mm_loadu_si128((const __m128i*) round_keys[steps]);
     __m128i rk1 = _mm_loadu_si128((const __m128i*) (round_keys[steps] + 16));

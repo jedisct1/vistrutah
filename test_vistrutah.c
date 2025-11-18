@@ -500,6 +500,254 @@ test_edge_cases()
     printf("\nEdge cases: %d/%d passed\n", passed, total);
 }
 
+// Helper to reverse bits in a byte (matches reference implementation)
+static uint8_t
+reverse_bits(uint8_t byte)
+{
+    uint8_t result = 0;
+    for (int i = 0; i < 8; i++) {
+        result = (result << 1) | (byte & 1);
+        byte >>= 1;
+    }
+    return result;
+}
+
+// Test against reference implementation vectors
+void
+test_reference_vectors()
+{
+    printf("\n=== Reference Implementation Test Vectors ===\n");
+    printf("Testing against /tmp/Vistrutah-code-isolated reference outputs\n");
+
+    int total_tests  = 0;
+    int passed_tests = 0;
+
+    // Reference test uses: key[i] = reverse_bits(i+1), plaintext[i] = i
+
+    // Vistrutah-256 test vectors
+    {
+        uint8_t key[32];
+        uint8_t plaintext[32];
+        uint8_t ciphertext[32];
+        uint8_t decrypted[32];
+
+        // Initialize key and plaintext as reference implementation does
+        for (int i = 0; i < 32; i++) {
+            key[i]       = reverse_bits(i + 1);
+            plaintext[i] = i;
+        }
+
+        // Test 1: Vistrutah-256, 10 rounds (short)
+        printf("\nVistrutah-256, 10 rounds (ROUNDS_SHORT):\n");
+        uint8_t expected_256_10r[32] = { 0xA9, 0x80, 0x3C, 0xC5, 0x4F, 0x27, 0x74, 0x53,
+                                         0x66, 0xA4, 0xF7, 0xE7, 0x99, 0xA3, 0x4E, 0x24,
+                                         0xF4, 0xC6, 0x9E, 0x37, 0xC2, 0x7E, 0x13, 0xC0,
+                                         0x32, 0xD8, 0x0E, 0xE5, 0x7F, 0x9F, 0xA3, 0x6E };
+
+        vistrutah_256_encrypt(plaintext, ciphertext, key, 32, VISTRUTAH_256_ROUNDS_SHORT);
+        total_tests++;
+        if (memcmp(ciphertext, expected_256_10r, 32) == 0) {
+            printf("✓ Encryption matches reference\n");
+            passed_tests++;
+        } else {
+            printf("✗ Encryption FAILED - does not match reference!\n");
+            print_hex("Expected ", expected_256_10r, 32);
+            print_hex("Got      ", ciphertext, 32);
+            exit(1); // Fail fast
+        }
+
+        // Verify decryption
+        vistrutah_256_decrypt(ciphertext, decrypted, key, 32, VISTRUTAH_256_ROUNDS_SHORT);
+        total_tests++;
+        if (memcmp(plaintext, decrypted, 32) == 0) {
+            printf("✓ Decryption matches original plaintext\n");
+            passed_tests++;
+        } else {
+            printf("✗ Decryption FAILED!\n");
+            print_hex("Expected ", plaintext, 32);
+            print_hex("Got      ", decrypted, 32);
+            exit(1); // Fail fast
+        }
+
+        // Test 2: Vistrutah-256, 14 rounds (long)
+        printf("\nVistrutah-256, 14 rounds (ROUNDS_LONG):\n");
+        uint8_t expected_256_14r[32] = { 0x04, 0x22, 0x7D, 0x3C, 0xD0, 0x0D, 0x1C, 0x7B,
+                                         0xE7, 0xDA, 0x78, 0x6B, 0x8C, 0x88, 0xF9, 0x59,
+                                         0x4E, 0x11, 0x43, 0x17, 0x22, 0x1C, 0x74, 0x30,
+                                         0xB4, 0x7E, 0xD2, 0x1E, 0x8E, 0xB1, 0x5B, 0xBD };
+
+        vistrutah_256_encrypt(plaintext, ciphertext, key, 32, VISTRUTAH_256_ROUNDS_LONG);
+        total_tests++;
+        if (memcmp(ciphertext, expected_256_14r, 32) == 0) {
+            printf("✓ Encryption matches reference\n");
+            passed_tests++;
+        } else {
+            printf("✗ Encryption FAILED - does not match reference!\n");
+            print_hex("Expected ", expected_256_14r, 32);
+            print_hex("Got      ", ciphertext, 32);
+            exit(1); // Fail fast
+        }
+
+        vistrutah_256_decrypt(ciphertext, decrypted, key, 32, VISTRUTAH_256_ROUNDS_LONG);
+        total_tests++;
+        if (memcmp(plaintext, decrypted, 32) == 0) {
+            printf("✓ Decryption matches original plaintext\n");
+            passed_tests++;
+        } else {
+            printf("✗ Decryption FAILED!\n");
+            print_hex("Expected ", plaintext, 32);
+            print_hex("Got      ", decrypted, 32);
+            exit(1); // Fail fast
+        }
+    }
+
+    // Vistrutah-512 test vectors
+    {
+        uint8_t key[32];
+        uint8_t plaintext[64];
+        uint8_t ciphertext[64];
+        uint8_t decrypted[64];
+
+        // Initialize key and plaintext as reference implementation does
+        for (int i = 0; i < 32; i++) {
+            key[i] = reverse_bits(i + 1);
+        }
+        for (int i = 0; i < 64; i++) {
+            plaintext[i] = i;
+        }
+
+        // Test 3: Vistrutah-512, 10 rounds, 256-bit key
+        printf("\nVistrutah-512, 10 rounds, 256-bit key (ROUNDS_SHORT_256KEY):\n");
+        uint8_t expected_512_10r[64] = { 0x09, 0xC3, 0x87, 0x69, 0x84, 0x35, 0x50, 0x41, 0xA4, 0x9A,
+                                         0xCF, 0x0C, 0xB8, 0x68, 0xE2, 0x64, 0x58, 0x52, 0x35, 0xE0,
+                                         0x58, 0x20, 0x05, 0x5C, 0x80, 0x8A, 0x3A, 0x03, 0xEA, 0xAE,
+                                         0x15, 0x7B, 0x00, 0x10, 0x0B, 0xC9, 0xB3, 0x01, 0x16, 0x96,
+                                         0xC0, 0xE1, 0xE8, 0x95, 0xE2, 0x16, 0x0C, 0xCC, 0xEF, 0x31,
+                                         0xA3, 0x45, 0x4E, 0x21, 0x6C, 0xA0, 0x1B, 0xCF, 0x63, 0x66,
+                                         0xF5, 0x84, 0xE2, 0x36 };
+
+        vistrutah_512_encrypt(plaintext, ciphertext, key, 32, VISTRUTAH_512_ROUNDS_SHORT_256KEY);
+        total_tests++;
+        if (memcmp(ciphertext, expected_512_10r, 64) == 0) {
+            printf("✓ Encryption matches reference\n");
+            passed_tests++;
+        } else {
+            printf("✗ Encryption FAILED - does not match reference!\n");
+            print_hex("Expected ", expected_512_10r, 64);
+            print_hex("Got      ", ciphertext, 64);
+            exit(1); // Fail fast
+        }
+
+        vistrutah_512_decrypt(ciphertext, decrypted, key, 32, VISTRUTAH_512_ROUNDS_SHORT_256KEY);
+        total_tests++;
+        if (memcmp(plaintext, decrypted, 64) == 0) {
+            printf("✓ Decryption matches original plaintext\n");
+            passed_tests++;
+        } else {
+            printf("✗ Decryption FAILED!\n");
+            exit(1); // Fail fast
+        }
+
+        // Test 4: Vistrutah-512, 12 rounds, 256-bit key
+        printf("\nVistrutah-512, 12 rounds, 256-bit key (ROUNDS_SHORT_512KEY):\n");
+        uint8_t expected_512_12r[64] = { 0xA6, 0x90, 0x27, 0x48, 0xC6, 0xF1, 0xF9, 0x33, 0x3C, 0xA6,
+                                         0x12, 0xB8, 0x5F, 0x86, 0x56, 0x1F, 0xD0, 0x46, 0x62, 0xE3,
+                                         0xC4, 0x05, 0xAC, 0x50, 0x13, 0x16, 0x82, 0x6A, 0x70, 0x2F,
+                                         0xCD, 0x4A, 0x23, 0x45, 0x94, 0xF8, 0xF9, 0xA5, 0xDD, 0xA2,
+                                         0x78, 0xD4, 0x4C, 0xC7, 0x23, 0xF5, 0xB8, 0x76, 0x72, 0x00,
+                                         0x0E, 0x42, 0x37, 0xE3, 0x82, 0x39, 0xC1, 0xBC, 0x06, 0x59,
+                                         0x1D, 0xE6, 0x29, 0x7C };
+
+        vistrutah_512_encrypt(plaintext, ciphertext, key, 32, VISTRUTAH_512_ROUNDS_SHORT_512KEY);
+        total_tests++;
+        if (memcmp(ciphertext, expected_512_12r, 64) == 0) {
+            printf("✓ Encryption matches reference\n");
+            passed_tests++;
+        } else {
+            printf("✗ Encryption FAILED - does not match reference!\n");
+            print_hex("Expected ", expected_512_12r, 64);
+            print_hex("Got      ", ciphertext, 64);
+            exit(1); // Fail fast
+        }
+
+        vistrutah_512_decrypt(ciphertext, decrypted, key, 32, VISTRUTAH_512_ROUNDS_SHORT_512KEY);
+        total_tests++;
+        if (memcmp(plaintext, decrypted, 64) == 0) {
+            printf("✓ Decryption matches original plaintext\n");
+            passed_tests++;
+        } else {
+            printf("✗ Decryption FAILED!\n");
+            exit(1); // Fail fast
+        }
+
+        // Test 5: Vistrutah-512, 14 rounds, 256-bit key
+        printf("\nVistrutah-512, 14 rounds, 256-bit key (ROUNDS_LONG_256KEY):\n");
+        uint8_t expected_512_14r[64] = { 0xA8, 0x75, 0xE9, 0xF9, 0x13, 0x0B, 0xE6, 0x8B, 0x68, 0x67,
+                                         0xCB, 0x66, 0xF4, 0x03, 0x18, 0xEC, 0x7E, 0x16, 0xA3, 0xA0,
+                                         0x50, 0x16, 0x51, 0xFF, 0xF3, 0xBE, 0x08, 0xFE, 0x70, 0xB3,
+                                         0xC7, 0x96, 0x0D, 0x9B, 0x1A, 0x83, 0x44, 0xC9, 0xEB, 0x61,
+                                         0xC2, 0xBF, 0xCB, 0xF2, 0xF6, 0x02, 0x8E, 0x1F, 0xCD, 0x94,
+                                         0x6B, 0xFF, 0xC9, 0x5B, 0xB4, 0x2F, 0x9E, 0x0E, 0x87, 0x61,
+                                         0x75, 0x83, 0x19, 0xE3 };
+
+        vistrutah_512_encrypt(plaintext, ciphertext, key, 32, VISTRUTAH_512_ROUNDS_LONG_256KEY);
+        total_tests++;
+        if (memcmp(ciphertext, expected_512_14r, 64) == 0) {
+            printf("✓ Encryption matches reference\n");
+            passed_tests++;
+        } else {
+            printf("✗ Encryption FAILED - does not match reference!\n");
+            print_hex("Expected ", expected_512_14r, 64);
+            print_hex("Got      ", ciphertext, 64);
+            exit(1); // Fail fast
+        }
+
+        vistrutah_512_decrypt(ciphertext, decrypted, key, 32, VISTRUTAH_512_ROUNDS_LONG_256KEY);
+        total_tests++;
+        if (memcmp(plaintext, decrypted, 64) == 0) {
+            printf("✓ Decryption matches original plaintext\n");
+            passed_tests++;
+        } else {
+            printf("✗ Decryption FAILED!\n");
+            exit(1); // Fail fast
+        }
+
+        // Test 6: Vistrutah-512, 18 rounds, 256-bit key
+        printf("\nVistrutah-512, 18 rounds, 256-bit key (ROUNDS_LONG_512KEY):\n");
+        uint8_t expected_512_18r[64] = { 0x6D, 0x7F, 0x18, 0x33, 0x6B, 0x35, 0xED, 0x4D, 0x78, 0x5D,
+                                         0xF2, 0x2D, 0xCE, 0x13, 0x49, 0x35, 0xAF, 0x3F, 0xC1, 0x4F,
+                                         0xD7, 0xC3, 0x80, 0x48, 0x85, 0x3E, 0xEE, 0x54, 0x02, 0x1C,
+                                         0xFB, 0x56, 0xBD, 0x30, 0x66, 0x96, 0xAD, 0x4C, 0x1E, 0x49,
+                                         0x82, 0xFD, 0x41, 0x36, 0xB5, 0x7D, 0x65, 0xEE, 0x0F, 0xE4,
+                                         0xB0, 0xC1, 0x05, 0x43, 0xDB, 0x5C, 0x9C, 0xAF, 0xFB, 0x7C,
+                                         0xBD, 0x26, 0x61, 0x13 };
+
+        vistrutah_512_encrypt(plaintext, ciphertext, key, 32, VISTRUTAH_512_ROUNDS_LONG_512KEY);
+        total_tests++;
+        if (memcmp(ciphertext, expected_512_18r, 64) == 0) {
+            printf("✓ Encryption matches reference\n");
+            passed_tests++;
+        } else {
+            printf("✗ Encryption FAILED - does not match reference!\n");
+            print_hex("Expected ", expected_512_18r, 64);
+            print_hex("Got      ", ciphertext, 64);
+            exit(1); // Fail fast
+        }
+
+        vistrutah_512_decrypt(ciphertext, decrypted, key, 32, VISTRUTAH_512_ROUNDS_LONG_512KEY);
+        total_tests++;
+        if (memcmp(plaintext, decrypted, 64) == 0) {
+            printf("✓ Decryption matches original plaintext\n");
+            passed_tests++;
+        } else {
+            printf("✗ Decryption FAILED!\n");
+            exit(1); // Fail fast
+        }
+    }
+
+    printf("\n✓✓✓ All reference tests passed: %d/%d ✓✓✓\n", passed_tests, total_tests);
+}
+
 void
 test_consistency()
 {
@@ -541,6 +789,9 @@ main()
     printf("=================================\n");
     printf("Implementation: %s\n", vistrutah_get_impl_name());
     printf("Hardware AES: %s\n\n", vistrutah_has_aes_accel() ? "Yes" : "No");
+
+    // FIRST: Test against reference implementation (fail fast if mismatched)
+    test_reference_vectors();
 
     // Basic functionality tests
     test_vistrutah_256();

@@ -80,10 +80,12 @@ mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 {
     uint8x16x4_t table = { *s0, *s1, *s2, *s3 };
 
-    const uint8_t idx0_data[16] = { 0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60 };
-    const uint8_t idx1_data[16] = { 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61 };
-    const uint8_t idx2_data[16] = { 2, 6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58, 62 };
-    const uint8_t idx3_data[16] = { 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63 };
+    const uint8_t idx0_data[16] = { 0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51 };
+    const uint8_t idx1_data[16] = { 8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59 };
+    const uint8_t idx2_data[16] = { 4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55 };
+    const uint8_t idx3_data[16] = {
+        12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
+    };
 
     uint8x16_t idx0 = vld1q_u8(idx0_data);
     uint8x16_t idx1 = vld1q_u8(idx1_data);
@@ -101,12 +103,10 @@ inv_mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t*
 {
     uint8x16x4_t table = { *s0, *s1, *s2, *s3 };
 
-    const uint8_t idx0_data[16] = { 0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51 };
-    const uint8_t idx1_data[16] = { 4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55 };
-    const uint8_t idx2_data[16] = { 8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59 };
-    const uint8_t idx3_data[16] = {
-        12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
-    };
+    const uint8_t idx0_data[16] = { 0, 4, 8, 12, 32, 36, 40, 44, 16, 20, 24, 28, 48, 52, 56, 60 };
+    const uint8_t idx1_data[16] = { 1, 5, 9, 13, 33, 37, 41, 45, 17, 21, 25, 29, 49, 53, 57, 61 };
+    const uint8_t idx2_data[16] = { 2, 6, 10, 14, 34, 38, 42, 46, 18, 22, 26, 30, 50, 54, 58, 62 };
+    const uint8_t idx3_data[16] = { 3, 7, 11, 15, 35, 39, 43, 47, 19, 23, 27, 31, 51, 55, 59, 63 };
 
     uint8x16_t idx0 = vld1q_u8(idx0_data);
     uint8x16_t idx1 = vld1q_u8(idx1_data);
@@ -139,12 +139,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         memcpy(fixed_key, key, 64);
     }
 
-    if (key_size == 64) {
-        uint8_t temp[32];
-        memcpy(temp, fixed_key + 32, 32);
-        for (int i = 0; i < 32; i++) {
-            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
-        }
+    uint8_t temp[32];
+    memcpy(temp, fixed_key + 32, 32);
+    for (int i = 0; i < 32; i++) {
+        fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
     }
 
     memcpy(round_key, fixed_key + 16, 16);
@@ -246,12 +244,10 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         memcpy(fixed_key, key, 64);
     }
 
-    if (key_size == 64) {
-        uint8_t temp[32];
-        memcpy(temp, fixed_key + 32, 32);
-        for (int i = 0; i < 32; i++) {
-            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
-        }
+    uint8_t temp[32];
+    memcpy(temp, fixed_key + 32, 32);
+    for (int i = 0; i < 32; i++) {
+        fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
     }
 
     memcpy(round_key, fixed_key + 16, 16);

@@ -263,12 +263,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         memcpy(fixed_key, key, 64);
     }
 
-    if (key_size == 64) {
-        uint8_t temp[32];
-        memcpy(temp, fixed_key + 32, 32);
-        for (int i = 0; i < 32; i++) {
-            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
-        }
+    uint8_t temp[32];
+    memcpy(temp, fixed_key + 32, 32);
+    for (int i = 0; i < 32; i++) {
+        fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
     }
 
     // Setup initial round key
@@ -364,12 +362,10 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         memcpy(fixed_key, key, 64);
     }
 
-    if (key_size == 64) {
-        uint8_t temp[32];
-        memcpy(temp, fixed_key + 32, 32);
-        for (int i = 0; i < 32; i++) {
-            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
-        }
+    uint8_t temp[32];
+    memcpy(temp, fixed_key + 32, 32);
+    for (int i = 0; i < 32; i++) {
+        fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
     }
 
     memcpy(round_key, fixed_key + 16, 16);
@@ -471,12 +467,10 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         memcpy(fixed_key, key, 64);
     }
 
-    if (key_size == 64) {
-        uint8_t temp[32];
-        memcpy(temp, fixed_key + 32, 32);
-        for (int i = 0; i < 32; i++) {
-            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
-        }
+    uint8_t temp[32];
+    memcpy(temp, fixed_key + 32, 32);
+    for (int i = 0; i < 32; i++) {
+        fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
     }
 
     memcpy(round_key, fixed_key + 16, 16);
@@ -576,12 +570,10 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         memcpy(fixed_key, key, 64);
     }
 
-    if (key_size == 64) {
-        uint8_t temp[32];
-        memcpy(temp, fixed_key + 32, 32);
-        for (int i = 0; i < 32; i++) {
-            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
-        }
+    uint8_t temp[32];
+    memcpy(temp, fixed_key + 32, 32);
+    for (int i = 0; i < 32; i++) {
+        fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
     }
 
     memcpy(round_key, fixed_key + 16, 16);

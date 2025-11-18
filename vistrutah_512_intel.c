@@ -53,7 +53,7 @@ mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 static void
 inv_mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 {
-    const __m128i extract_mask = _mm_set_epi8(15,11,7,3, 14,10,6,2, 13,9,5,1, 12,8,4,0);
+    const __m128i extract_mask = _mm_set_epi8(15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0);
 
     __m128i e0 = _mm_shuffle_epi8(*s0, extract_mask);
     __m128i e1 = _mm_shuffle_epi8(*s1, extract_mask);

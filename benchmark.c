@@ -6,9 +6,9 @@
 #include <time.h>
 
 #if defined(VISTRUTAH_INTEL)
-#include <immintrin.h>
+#    include <immintrin.h>
 #elif defined(VISTRUTAH_ARM)
-#include <arm_neon.h>
+#    include <arm_neon.h>
 #endif
 
 #ifdef __MACH__
@@ -297,7 +297,7 @@ benchmark_latency_512(const char *label, const uint8_t *key, int key_size, int r
 static inline void
 aes128_key_expansion(const uint8_t *key, __m128i *rk)
 {
-    rk[0] = _mm_loadu_si128((const __m128i*) key);
+    rk[0] = _mm_loadu_si128((const __m128i *) key);
 
     __m128i temp1 = rk[0];
     __m128i temp2;
@@ -365,18 +365,18 @@ aes128_key_expansion(const uint8_t *key, __m128i *rk)
     temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[9] = _mm_xor_si128(temp1, temp2);
 
-    temp2 = _mm_aeskeygenassist_si128(rk[9], 0x36);
-    temp2 = _mm_shuffle_epi32(temp2, 0xff);
-    temp1 = _mm_xor_si128(rk[9], _mm_slli_si128(rk[9], 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp2  = _mm_aeskeygenassist_si128(rk[9], 0x36);
+    temp2  = _mm_shuffle_epi32(temp2, 0xff);
+    temp1  = _mm_xor_si128(rk[9], _mm_slli_si128(rk[9], 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[10] = _mm_xor_si128(temp1, temp2);
 }
 
 static inline void
 aes128_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, const __m128i *rk)
 {
-    __m128i state = _mm_loadu_si128((const __m128i*) plaintext);
+    __m128i state = _mm_loadu_si128((const __m128i *) plaintext);
 
     state = _mm_xor_si128(state, rk[0]);
     state = _mm_aesenc_si128(state, rk[1]);
@@ -390,14 +390,14 @@ aes128_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, cons
     state = _mm_aesenc_si128(state, rk[9]);
     state = _mm_aesenclast_si128(state, rk[10]);
 
-    _mm_storeu_si128((__m128i*) ciphertext, state);
+    _mm_storeu_si128((__m128i *) ciphertext, state);
 }
 
 static inline void
 aes256_key_expansion(const uint8_t *key, __m128i *rk)
 {
-    rk[0] = _mm_loadu_si128((const __m128i*) key);
-    rk[1] = _mm_loadu_si128((const __m128i*) (key + 16));
+    rk[0] = _mm_loadu_si128((const __m128i *) key);
+    rk[1] = _mm_loadu_si128((const __m128i *) (key + 16));
 
     __m128i temp1 = rk[0];
     __m128i temp2 = rk[1];
@@ -459,46 +459,46 @@ aes256_key_expansion(const uint8_t *key, __m128i *rk)
     temp2 = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
     rk[9] = _mm_xor_si128(temp2, temp3);
 
-    temp3 = _mm_aeskeygenassist_si128(rk[9], 0x10);
-    temp3 = _mm_shuffle_epi32(temp3, 0xff);
-    temp1 = _mm_xor_si128(rk[8], _mm_slli_si128(rk[8], 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp3  = _mm_aeskeygenassist_si128(rk[9], 0x10);
+    temp3  = _mm_shuffle_epi32(temp3, 0xff);
+    temp1  = _mm_xor_si128(rk[8], _mm_slli_si128(rk[8], 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[10] = _mm_xor_si128(temp1, temp3);
 
-    temp3 = _mm_aeskeygenassist_si128(rk[10], 0x00);
-    temp3 = _mm_shuffle_epi32(temp3, 0xaa);
-    temp2 = _mm_xor_si128(rk[9], _mm_slli_si128(rk[9], 4));
-    temp2 = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
-    temp2 = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
+    temp3  = _mm_aeskeygenassist_si128(rk[10], 0x00);
+    temp3  = _mm_shuffle_epi32(temp3, 0xaa);
+    temp2  = _mm_xor_si128(rk[9], _mm_slli_si128(rk[9], 4));
+    temp2  = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
+    temp2  = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
     rk[11] = _mm_xor_si128(temp2, temp3);
 
-    temp3 = _mm_aeskeygenassist_si128(rk[11], 0x20);
-    temp3 = _mm_shuffle_epi32(temp3, 0xff);
-    temp1 = _mm_xor_si128(rk[10], _mm_slli_si128(rk[10], 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp3  = _mm_aeskeygenassist_si128(rk[11], 0x20);
+    temp3  = _mm_shuffle_epi32(temp3, 0xff);
+    temp1  = _mm_xor_si128(rk[10], _mm_slli_si128(rk[10], 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[12] = _mm_xor_si128(temp1, temp3);
 
-    temp3 = _mm_aeskeygenassist_si128(rk[12], 0x00);
-    temp3 = _mm_shuffle_epi32(temp3, 0xaa);
-    temp2 = _mm_xor_si128(rk[11], _mm_slli_si128(rk[11], 4));
-    temp2 = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
-    temp2 = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
+    temp3  = _mm_aeskeygenassist_si128(rk[12], 0x00);
+    temp3  = _mm_shuffle_epi32(temp3, 0xaa);
+    temp2  = _mm_xor_si128(rk[11], _mm_slli_si128(rk[11], 4));
+    temp2  = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
+    temp2  = _mm_xor_si128(temp2, _mm_slli_si128(temp2, 4));
     rk[13] = _mm_xor_si128(temp2, temp3);
 
-    temp3 = _mm_aeskeygenassist_si128(rk[13], 0x40);
-    temp3 = _mm_shuffle_epi32(temp3, 0xff);
-    temp1 = _mm_xor_si128(rk[12], _mm_slli_si128(rk[12], 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
-    temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp3  = _mm_aeskeygenassist_si128(rk[13], 0x40);
+    temp3  = _mm_shuffle_epi32(temp3, 0xff);
+    temp1  = _mm_xor_si128(rk[12], _mm_slli_si128(rk[12], 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
+    temp1  = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[14] = _mm_xor_si128(temp1, temp3);
 }
 
 static inline void
 aes256_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, const __m128i *rk)
 {
-    __m128i state = _mm_loadu_si128((const __m128i*) plaintext);
+    __m128i state = _mm_loadu_si128((const __m128i *) plaintext);
 
     state = _mm_xor_si128(state, rk[0]);
     state = _mm_aesenc_si128(state, rk[1]);
@@ -516,7 +516,7 @@ aes256_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, cons
     state = _mm_aesenc_si128(state, rk[13]);
     state = _mm_aesenclast_si128(state, rk[14]);
 
-    _mm_storeu_si128((__m128i*) ciphertext, state);
+    _mm_storeu_si128((__m128i *) ciphertext, state);
 }
 
 static void
@@ -579,36 +579,41 @@ aes128_key_expansion(const uint8_t *key, uint8x16_t *rk)
 {
     rk[0] = vld1q_u8(key);
 
-    static const uint8_t rcon[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
-    uint8x16_t temp = rk[0];
+    static const uint8_t rcon[] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
+    uint8x16_t           temp   = rk[0];
 
     for (int i = 0; i < 10; i++) {
         uint32_t t = vgetq_lane_u32(vreinterpretq_u32_u8(temp), 3);
-        t = (t >> 8) | (t << 24);
+        t          = (t >> 8) | (t << 24);
 
         uint8_t sbox_result[4];
-        sbox_result[0] = vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 0) & 0xff, vmovq_n_u8(0), 0)), 0);
-        sbox_result[1] = vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 8) & 0xff, vmovq_n_u8(0), 0)), 0);
-        sbox_result[2] = vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 16) & 0xff, vmovq_n_u8(0), 0)), 0);
-        sbox_result[3] = vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 24) & 0xff, vmovq_n_u8(0), 0)), 0);
+        sbox_result[0] = vgetq_lane_u8(
+            vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 0) & 0xff, vmovq_n_u8(0), 0)), 0);
+        sbox_result[1] = vgetq_lane_u8(
+            vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 8) & 0xff, vmovq_n_u8(0), 0)), 0);
+        sbox_result[2] = vgetq_lane_u8(
+            vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 16) & 0xff, vmovq_n_u8(0), 0)), 0);
+        sbox_result[3] = vgetq_lane_u8(
+            vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> 24) & 0xff, vmovq_n_u8(0), 0)), 0);
 
-        t = (sbox_result[0] << 0) | (sbox_result[1] << 8) | (sbox_result[2] << 16) | (sbox_result[3] << 24);
+        t = (sbox_result[0] << 0) | (sbox_result[1] << 8) | (sbox_result[2] << 16) |
+            (sbox_result[3] << 24);
         t ^= rcon[i];
 
-        uint32x4_t t_vec = vdupq_n_u32(t);
+        uint32x4_t t_vec    = vdupq_n_u32(t);
         uint32x4_t temp_u32 = vreinterpretq_u32_u8(temp);
 
         uint32x4_t shifted1 = vextq_u32(vdupq_n_u32(0), temp_u32, 3);
-        temp_u32 = veorq_u32(temp_u32, shifted1);
+        temp_u32            = veorq_u32(temp_u32, shifted1);
         uint32x4_t shifted2 = vextq_u32(vdupq_n_u32(0), temp_u32, 3);
-        temp_u32 = veorq_u32(temp_u32, shifted2);
+        temp_u32            = veorq_u32(temp_u32, shifted2);
         uint32x4_t shifted3 = vextq_u32(vdupq_n_u32(0), temp_u32, 3);
-        temp_u32 = veorq_u32(temp_u32, shifted3);
+        temp_u32            = veorq_u32(temp_u32, shifted3);
 
         temp_u32 = veorq_u32(temp_u32, vshlq_n_u32(t_vec, 0));
-        temp = vreinterpretq_u8_u32(temp_u32);
+        temp     = vreinterpretq_u8_u32(temp_u32);
 
-        rk[i+1] = temp;
+        rk[i + 1] = temp;
     }
 }
 
@@ -648,57 +653,64 @@ aes256_key_expansion(const uint8_t *key, uint8x16_t *rk)
     rk[0] = vld1q_u8(key);
     rk[1] = vld1q_u8(key + 16);
 
-    static const uint8_t rcon[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40};
+    static const uint8_t rcon[] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40 };
 
     for (int i = 0; i < 7; i++) {
-        uint8x16_t temp1 = rk[i*2];
-        uint8x16_t temp2 = rk[i*2 + 1];
+        uint8x16_t temp1 = rk[i * 2];
+        uint8x16_t temp2 = rk[i * 2 + 1];
 
         uint32_t t = vgetq_lane_u32(vreinterpretq_u32_u8(temp2), 3);
-        t = (t >> 8) | (t << 24);
+        t          = (t >> 8) | (t << 24);
 
         uint8_t sbox_result[4];
         for (int j = 0; j < 4; j++) {
-            sbox_result[j] = vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> (j*8)) & 0xff, vmovq_n_u8(0), 0)), 0);
+            sbox_result[j] = vgetq_lane_u8(
+                vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> (j * 8)) & 0xff, vmovq_n_u8(0), 0)),
+                0);
         }
 
-        t = (sbox_result[0] << 0) | (sbox_result[1] << 8) | (sbox_result[2] << 16) | (sbox_result[3] << 24);
+        t = (sbox_result[0] << 0) | (sbox_result[1] << 8) | (sbox_result[2] << 16) |
+            (sbox_result[3] << 24);
         t ^= rcon[i];
 
-        uint32x4_t t_vec = vdupq_n_u32(t);
+        uint32x4_t t_vec     = vdupq_n_u32(t);
         uint32x4_t temp1_u32 = vreinterpretq_u32_u8(temp1);
 
         uint32x4_t shifted = vextq_u32(vdupq_n_u32(0), temp1_u32, 3);
-        temp1_u32 = veorq_u32(temp1_u32, shifted);
-        shifted = vextq_u32(vdupq_n_u32(0), temp1_u32, 3);
-        temp1_u32 = veorq_u32(temp1_u32, shifted);
-        shifted = vextq_u32(vdupq_n_u32(0), temp1_u32, 3);
-        temp1_u32 = veorq_u32(temp1_u32, shifted);
-        temp1_u32 = veorq_u32(temp1_u32, t_vec);
+        temp1_u32          = veorq_u32(temp1_u32, shifted);
+        shifted            = vextq_u32(vdupq_n_u32(0), temp1_u32, 3);
+        temp1_u32          = veorq_u32(temp1_u32, shifted);
+        shifted            = vextq_u32(vdupq_n_u32(0), temp1_u32, 3);
+        temp1_u32          = veorq_u32(temp1_u32, shifted);
+        temp1_u32          = veorq_u32(temp1_u32, t_vec);
 
-        rk[i*2 + 2] = vreinterpretq_u8_u32(temp1_u32);
+        rk[i * 2 + 2] = vreinterpretq_u8_u32(temp1_u32);
 
         if (i < 6) {
-            t = vgetq_lane_u32(vreinterpretq_u32_u8(rk[i*2 + 2]), 3);
+            t = vgetq_lane_u32(vreinterpretq_u32_u8(rk[i * 2 + 2]), 3);
 
             for (int j = 0; j < 4; j++) {
-                sbox_result[j] = vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0), vsetq_lane_u8((t >> (j*8)) & 0xff, vmovq_n_u8(0), 0)), 0);
+                sbox_result[j] =
+                    vgetq_lane_u8(vaeseq_u8(vmovq_n_u8(0),
+                                            vsetq_lane_u8((t >> (j * 8)) & 0xff, vmovq_n_u8(0), 0)),
+                                  0);
             }
 
-            t = (sbox_result[0] << 0) | (sbox_result[1] << 8) | (sbox_result[2] << 16) | (sbox_result[3] << 24);
+            t = (sbox_result[0] << 0) | (sbox_result[1] << 8) | (sbox_result[2] << 16) |
+                (sbox_result[3] << 24);
 
-            t_vec = vdupq_n_u32(t);
+            t_vec                = vdupq_n_u32(t);
             uint32x4_t temp2_u32 = vreinterpretq_u32_u8(temp2);
 
-            shifted = vextq_u32(vdupq_n_u32(0), temp2_u32, 3);
+            shifted   = vextq_u32(vdupq_n_u32(0), temp2_u32, 3);
             temp2_u32 = veorq_u32(temp2_u32, shifted);
-            shifted = vextq_u32(vdupq_n_u32(0), temp2_u32, 3);
+            shifted   = vextq_u32(vdupq_n_u32(0), temp2_u32, 3);
             temp2_u32 = veorq_u32(temp2_u32, shifted);
-            shifted = vextq_u32(vdupq_n_u32(0), temp2_u32, 3);
+            shifted   = vextq_u32(vdupq_n_u32(0), temp2_u32, 3);
             temp2_u32 = veorq_u32(temp2_u32, shifted);
             temp2_u32 = veorq_u32(temp2_u32, t_vec);
 
-            rk[i*2 + 3] = vreinterpretq_u8_u32(temp2_u32);
+            rk[i * 2 + 3] = vreinterpretq_u8_u32(temp2_u32);
         }
     }
 }
@@ -777,9 +789,9 @@ benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
 static void
 benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
 {
-    (void)label;
-    (void)key;
-    (void)key_size;
+    (void) label;
+    (void) key;
+    (void) key_size;
     printf("  AES benchmarks not available (no hardware acceleration)\n");
 }
 #endif

@@ -28,47 +28,43 @@ rotate_bytes(uint8_t* data, int shift, int len)
 static void
 mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 {
-    uint8_t temp[64];
-    vst1q_u8(temp, *s0);
-    vst1q_u8(temp + 16, *s1);
-    vst1q_u8(temp + 32, *s2);
-    vst1q_u8(temp + 48, *s3);
+    uint8x16x4_t table = {*s0, *s1, *s2, *s3};
 
-    uint8_t result[64];
-    for (int i = 0; i < 16; i++) {
-        result[i]      = temp[4 * i];
-        result[16 + i] = temp[4 * i + 1];
-        result[32 + i] = temp[4 * i + 2];
-        result[48 + i] = temp[4 * i + 3];
-    }
+    const uint8_t idx0_data[16] = {0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60};
+    const uint8_t idx1_data[16] = {1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61};
+    const uint8_t idx2_data[16] = {2, 6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58, 62};
+    const uint8_t idx3_data[16] = {3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63};
 
-    *s0 = vld1q_u8(result);
-    *s1 = vld1q_u8(result + 16);
-    *s2 = vld1q_u8(result + 32);
-    *s3 = vld1q_u8(result + 48);
+    uint8x16_t idx0 = vld1q_u8(idx0_data);
+    uint8x16_t idx1 = vld1q_u8(idx1_data);
+    uint8x16_t idx2 = vld1q_u8(idx2_data);
+    uint8x16_t idx3 = vld1q_u8(idx3_data);
+
+    *s0 = vqtbl4q_u8(table, idx0);
+    *s1 = vqtbl4q_u8(table, idx1);
+    *s2 = vqtbl4q_u8(table, idx2);
+    *s3 = vqtbl4q_u8(table, idx3);
 }
 
 static void
 inv_mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 {
-    uint8_t temp[64];
-    vst1q_u8(temp, *s0);
-    vst1q_u8(temp + 16, *s1);
-    vst1q_u8(temp + 32, *s2);
-    vst1q_u8(temp + 48, *s3);
+    uint8x16x4_t table = {*s0, *s1, *s2, *s3};
 
-    uint8_t result[64];
-    for (int i = 0; i < 16; i++) {
-        result[4 * i]     = temp[i];
-        result[4 * i + 1] = temp[16 + i];
-        result[4 * i + 2] = temp[32 + i];
-        result[4 * i + 3] = temp[48 + i];
-    }
+    const uint8_t idx0_data[16] = {0, 16, 32, 48, 1, 17, 33, 49, 2,  18, 34, 50, 3,  19, 35, 51};
+    const uint8_t idx1_data[16] = {4, 20, 36, 52, 5, 21, 37, 53, 6,  22, 38, 54, 7,  23, 39, 55};
+    const uint8_t idx2_data[16] = {8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59};
+    const uint8_t idx3_data[16] = {12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63};
 
-    *s0 = vld1q_u8(result);
-    *s1 = vld1q_u8(result + 16);
-    *s2 = vld1q_u8(result + 32);
-    *s3 = vld1q_u8(result + 48);
+    uint8x16_t idx0 = vld1q_u8(idx0_data);
+    uint8x16_t idx1 = vld1q_u8(idx1_data);
+    uint8x16_t idx2 = vld1q_u8(idx2_data);
+    uint8x16_t idx3 = vld1q_u8(idx3_data);
+
+    *s0 = vqtbl4q_u8(table, idx0);
+    *s1 = vqtbl4q_u8(table, idx1);
+    *s2 = vqtbl4q_u8(table, idx2);
+    *s3 = vqtbl4q_u8(table, idx3);
 }
 
 void

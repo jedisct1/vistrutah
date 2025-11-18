@@ -33,35 +33,19 @@ vistrutah_get_impl_name(void)
 static void
 mixing_layer_256(uint8x16_t* s0, uint8x16_t* s1)
 {
-    uint8_t temp[32];
-    vst1q_u8(temp, *s0);
-    vst1q_u8(temp + 16, *s1);
-
-    uint8_t result[32];
-    for (int i = 0; i < 16; i++) {
-        result[i]      = temp[2 * i];
-        result[16 + i] = temp[2 * i + 1];
-    }
-
-    *s0 = vld1q_u8(result);
-    *s1 = vld1q_u8(result + 16);
+    uint8x16_t t0 = *s0;
+    uint8x16_t t1 = *s1;
+    *s0           = vuzp1q_u8(t0, t1);
+    *s1           = vuzp2q_u8(t0, t1);
 }
 
 static void
 inv_mixing_layer_256(uint8x16_t* s0, uint8x16_t* s1)
 {
-    uint8_t temp[32];
-    vst1q_u8(temp, *s0);
-    vst1q_u8(temp + 16, *s1);
-
-    uint8_t result[32];
-    for (int i = 0; i < 16; i++) {
-        result[2 * i]     = temp[i];
-        result[2 * i + 1] = temp[16 + i];
-    }
-
-    *s0 = vld1q_u8(result);
-    *s1 = vld1q_u8(result + 16);
+    uint8x16_t t0 = *s0;
+    uint8x16_t t1 = *s1;
+    *s0           = vzip1q_u8(t0, t1);
+    *s1           = vzip2q_u8(t0, t1);
 }
 
 static void

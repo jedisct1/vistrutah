@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 199309L
 #include "vistrutah.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -40,88 +40,29 @@ aes_inv_final_round_512(__m512i state, __m512i round_key)
 static inline __m512i
 mixing_layer_512(__m512i state)
 {
-    const __m512i mask0 = _mm512_set_epi8(
-        60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0, 60, 56, 52, 48, 44, 40, 36, 32,
-        28, 24, 20, 16, 12, 8, 4, 0, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0,
-        60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0);
-    const __m512i mask1 = _mm512_set_epi8(
-        61, 57, 53, 49, 45, 41, 37, 33, 29, 25, 21, 17, 13, 9, 5, 1, 61, 57, 53, 49, 45, 41, 37, 33,
-        29, 25, 21, 17, 13, 9, 5, 1, 61, 57, 53, 49, 45, 41, 37, 33, 29, 25, 21, 17, 13, 9, 5, 1,
-        61, 57, 53, 49, 45, 41, 37, 33, 29, 25, 21, 17, 13, 9, 5, 1);
-    const __m512i mask2 = _mm512_set_epi8(
-        62, 58, 54, 50, 46, 42, 38, 34, 30, 26, 22, 18, 14, 10, 6, 2, 62, 58, 54, 50, 46, 42, 38,
-        34, 30, 26, 22, 18, 14, 10, 6, 2, 62, 58, 54, 50, 46, 42, 38, 34, 30, 26, 22, 18, 14, 10, 6,
-        2, 62, 58, 54, 50, 46, 42, 38, 34, 30, 26, 22, 18, 14, 10, 6, 2);
-    const __m512i mask3 = _mm512_set_epi8(
-        63, 59, 55, 51, 47, 43, 39, 35, 31, 27, 23, 19, 15, 11, 7, 3, 63, 59, 55, 51, 47, 43, 39,
-        35, 31, 27, 23, 19, 15, 11, 7, 3, 63, 59, 55, 51, 47, 43, 39, 35, 31, 27, 23, 19, 15, 11, 7,
-        3, 63, 59, 55, 51, 47, 43, 39, 35, 31, 27, 23, 19, 15, 11, 7, 3);
+    // vzip permutation for Vistrutah-512 transpose
+    // This implements the byte-level transpose that interleaves bytes from 4 lanes
+    const __m512i perm_idx = _mm512_set_epi8(
+        63, 47, 31, 15,  62, 46, 30, 14,  61, 45, 29, 13,  60, 44, 28, 12,
+        55, 39, 23,  7,  54, 38, 22,  6,  53, 37, 21,  5,  52, 36, 20,  4,
+        59, 43, 27, 11,  58, 42, 26, 10,  57, 41, 25,  9,  56, 40, 24,  8,
+        51, 35, 19,  3,  50, 34, 18,  2,  49, 33, 17,  1,  48, 32, 16,  0
+    );
 
-    __m512i p0 = _mm512_shuffle_epi8(state, mask0);
-    __m512i p1 = _mm512_shuffle_epi8(state, mask1);
-    __m512i p2 = _mm512_shuffle_epi8(state, mask2);
-    __m512i p3 = _mm512_shuffle_epi8(state, mask3);
-
-    __m128i p0_0 = _mm512_extracti32x4_epi32(p0, 0);
-    __m128i p0_1 = _mm512_extracti32x4_epi32(p0, 1);
-    __m128i p0_2 = _mm512_extracti32x4_epi32(p0, 2);
-    __m128i p0_3 = _mm512_extracti32x4_epi32(p0, 3);
-
-    __m128i p1_0 = _mm512_extracti32x4_epi32(p1, 0);
-    __m128i p1_1 = _mm512_extracti32x4_epi32(p1, 1);
-    __m128i p1_2 = _mm512_extracti32x4_epi32(p1, 2);
-    __m128i p1_3 = _mm512_extracti32x4_epi32(p1, 3);
-
-    __m128i p2_0 = _mm512_extracti32x4_epi32(p2, 0);
-    __m128i p2_1 = _mm512_extracti32x4_epi32(p2, 1);
-    __m128i p2_2 = _mm512_extracti32x4_epi32(p2, 2);
-    __m128i p2_3 = _mm512_extracti32x4_epi32(p2, 3);
-
-    __m128i p3_0 = _mm512_extracti32x4_epi32(p3, 0);
-    __m128i p3_1 = _mm512_extracti32x4_epi32(p3, 1);
-    __m128i p3_2 = _mm512_extracti32x4_epi32(p3, 2);
-    __m128i p3_3 = _mm512_extracti32x4_epi32(p3, 3);
-
-    __m128i r0_01 = _mm_unpacklo_epi32(p0_0, p0_1);
-    __m128i r0_23 = _mm_unpacklo_epi32(p0_2, p0_3);
-    __m128i r1_01 = _mm_unpacklo_epi32(p1_0, p1_1);
-    __m128i r1_23 = _mm_unpacklo_epi32(p1_2, p1_3);
-    __m128i r2_01 = _mm_unpacklo_epi32(p2_0, p2_1);
-    __m128i r2_23 = _mm_unpacklo_epi32(p2_2, p2_3);
-    __m128i r3_01 = _mm_unpacklo_epi32(p3_0, p3_1);
-    __m128i r3_23 = _mm_unpacklo_epi32(p3_2, p3_3);
-
-    __m128i r0 = _mm_unpacklo_epi64(r0_01, r0_23);
-    __m128i r1 = _mm_unpacklo_epi64(r1_01, r1_23);
-    __m128i r2 = _mm_unpacklo_epi64(r2_01, r2_23);
-    __m128i r3 = _mm_unpacklo_epi64(r3_01, r3_23);
-
-    return _mm512_inserti32x4(
-        _mm512_inserti32x4(_mm512_inserti32x4(_mm512_castsi128_si512(r0), r1, 1), r2, 2), r3, 3);
+    return _mm512_permutexvar_epi8(perm_idx, state);
 }
 
 static inline __m512i
 inv_mixing_layer_512(__m512i state)
 {
-    __m128i s0 = _mm512_extracti32x4_epi32(state, 0);
-    __m128i s1 = _mm512_extracti32x4_epi32(state, 1);
-    __m128i s2 = _mm512_extracti32x4_epi32(state, 2);
-    __m128i s3 = _mm512_extracti32x4_epi32(state, 3);
+    const __m512i perm_idx = _mm512_set_epi8(
+        63, 59, 55, 51, 31, 27, 23, 19, 47, 43, 39, 35, 15, 11,  7,  3,
+        62, 58, 54, 50, 30, 26, 22, 18, 46, 42, 38, 34, 14, 10,  6,  2,
+        61, 57, 53, 49, 29, 25, 21, 17, 45, 41, 37, 33, 13,  9,  5,  1,
+        60, 56, 52, 48, 28, 24, 20, 16, 44, 40, 36, 32, 12,  8,  4,  0
+    );
 
-    __m128i step1_0 = _mm_unpacklo_epi8(s0, s1);
-    __m128i step1_1 = _mm_unpackhi_epi8(s0, s1);
-    __m128i step1_2 = _mm_unpacklo_epi8(s2, s3);
-    __m128i step1_3 = _mm_unpackhi_epi8(s2, s3);
-
-    __m128i step2_0 = _mm_unpacklo_epi16(step1_0, step1_2);
-    __m128i step2_1 = _mm_unpackhi_epi16(step1_0, step1_2);
-    __m128i step2_2 = _mm_unpacklo_epi16(step1_1, step1_3);
-    __m128i step2_3 = _mm_unpackhi_epi16(step1_1, step1_3);
-
-    return _mm512_inserti32x4(
-        _mm512_inserti32x4(_mm512_inserti32x4(_mm512_castsi128_si512(step2_0), step2_1, 1), step2_2,
-                           2),
-        step2_3, 3);
+    return _mm512_permutexvar_epi8(perm_idx, state);
 }
 
 // Rotate bytes within a 128-bit lane using shuffle
@@ -165,70 +106,58 @@ aes_inv_final_round(__m128i state, __m128i round_key)
 }
 
 #    ifndef VISTRUTAH_VAES
+// vzip permutation lookup table
+static const uint8_t vzip[64] = {  0, 16, 32, 48,   1, 17, 33, 49,    2, 18, 34, 50,    3, 19, 35, 51,
+                                    8, 24, 40, 56,   9, 25, 41, 57,   10, 26, 42, 58,   11, 27, 43, 59,
+                                    4, 20, 36, 52,   5, 21, 37, 53,    6, 22, 38, 54,    7, 23, 39, 55,
+                                   12, 28, 44, 60,  13, 29, 45, 61,   14, 30, 46, 62,   15, 31, 47, 63 };
+
+// vunzip permutation lookup table
+static const uint8_t vunzip[64] = {   0,  4,  8, 12,   32, 36, 40, 44,   16, 20, 24, 28,   48, 52, 56, 60,
+                                       1,  5,  9, 13,   33, 37, 41, 45,   17, 21, 25, 29,   49, 53, 57, 61,
+                                       2,  6, 10, 14,   34, 38, 42, 46,   18, 22, 26, 30,   50, 54, 58, 62,
+                                       3,  7, 11, 15,   35, 39, 43, 47,   19, 23, 27, 31,   51, 55, 59, 63 };
+
 static void
 mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 {
-    __m128i t0 = *s0, t1 = *s1, t2 = *s2, t3 = *s3;
+    uint8_t temp[64];
+    uint8_t result[64];
 
-    const __m128i mask0 = _mm_set_epi8(12, 8, 4, 0, 12, 8, 4, 0, 12, 8, 4, 0, 12, 8, 4, 0);
-    const __m128i mask1 = _mm_set_epi8(13, 9, 5, 1, 13, 9, 5, 1, 13, 9, 5, 1, 13, 9, 5, 1);
-    const __m128i mask2 = _mm_set_epi8(14, 10, 6, 2, 14, 10, 6, 2, 14, 10, 6, 2, 14, 10, 6, 2);
-    const __m128i mask3 = _mm_set_epi8(15, 11, 7, 3, 15, 11, 7, 3, 15, 11, 7, 3, 15, 11, 7, 3);
+    _mm_storeu_si128((__m128i*) temp, *s0);
+    _mm_storeu_si128((__m128i*) (temp + 16), *s1);
+    _mm_storeu_si128((__m128i*) (temp + 32), *s2);
+    _mm_storeu_si128((__m128i*) (temp + 48), *s3);
 
-    __m128i s0_0 = _mm_shuffle_epi8(t0, mask0);
-    __m128i s1_0 = _mm_shuffle_epi8(t1, mask0);
-    __m128i s2_0 = _mm_shuffle_epi8(t2, mask0);
-    __m128i s3_0 = _mm_shuffle_epi8(t3, mask0);
+    for (int i = 0; i < 64; i++) {
+        result[i] = temp[vzip[i]];
+    }
 
-    __m128i s0_1 = _mm_shuffle_epi8(t0, mask1);
-    __m128i s1_1 = _mm_shuffle_epi8(t1, mask1);
-    __m128i s2_1 = _mm_shuffle_epi8(t2, mask1);
-    __m128i s3_1 = _mm_shuffle_epi8(t3, mask1);
-
-    __m128i s0_2 = _mm_shuffle_epi8(t0, mask2);
-    __m128i s1_2 = _mm_shuffle_epi8(t1, mask2);
-    __m128i s2_2 = _mm_shuffle_epi8(t2, mask2);
-    __m128i s3_2 = _mm_shuffle_epi8(t3, mask2);
-
-    __m128i s0_3 = _mm_shuffle_epi8(t0, mask3);
-    __m128i s1_3 = _mm_shuffle_epi8(t1, mask3);
-    __m128i s2_3 = _mm_shuffle_epi8(t2, mask3);
-    __m128i s3_3 = _mm_shuffle_epi8(t3, mask3);
-
-    __m128i r0_lo = _mm_unpacklo_epi32(s0_0, s1_0);
-    __m128i r0_hi = _mm_unpacklo_epi32(s2_0, s3_0);
-    __m128i r1_lo = _mm_unpacklo_epi32(s0_1, s1_1);
-    __m128i r1_hi = _mm_unpacklo_epi32(s2_1, s3_1);
-    __m128i r2_lo = _mm_unpacklo_epi32(s0_2, s1_2);
-    __m128i r2_hi = _mm_unpacklo_epi32(s2_2, s3_2);
-    __m128i r3_lo = _mm_unpacklo_epi32(s0_3, s1_3);
-    __m128i r3_hi = _mm_unpacklo_epi32(s2_3, s3_3);
-
-    *s0 = _mm_unpacklo_epi64(r0_lo, r0_hi);
-    *s1 = _mm_unpacklo_epi64(r1_lo, r1_hi);
-    *s2 = _mm_unpacklo_epi64(r2_lo, r2_hi);
-    *s3 = _mm_unpacklo_epi64(r3_lo, r3_hi);
+    *s0 = _mm_loadu_si128((const __m128i*) result);
+    *s1 = _mm_loadu_si128((const __m128i*) (result + 16));
+    *s2 = _mm_loadu_si128((const __m128i*) (result + 32));
+    *s3 = _mm_loadu_si128((const __m128i*) (result + 48));
 }
 
 static void
 inv_mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 {
-    __m128i t0 = *s0, t1 = *s1, t2 = *s2, t3 = *s3;
+    uint8_t temp[64];
+    uint8_t result[64];
 
-    __m128i step1_0 = _mm_unpacklo_epi8(t0, t1);
-    __m128i step1_1 = _mm_unpackhi_epi8(t0, t1);
-    __m128i step1_2 = _mm_unpacklo_epi8(t2, t3);
-    __m128i step1_3 = _mm_unpackhi_epi8(t2, t3);
+    _mm_storeu_si128((__m128i*) temp, *s0);
+    _mm_storeu_si128((__m128i*) (temp + 16), *s1);
+    _mm_storeu_si128((__m128i*) (temp + 32), *s2);
+    _mm_storeu_si128((__m128i*) (temp + 48), *s3);
 
-    __m128i step2_0 = _mm_unpacklo_epi16(step1_0, step1_2);
-    __m128i step2_1 = _mm_unpackhi_epi16(step1_0, step1_2);
-    __m128i step2_2 = _mm_unpacklo_epi16(step1_1, step1_3);
-    __m128i step2_3 = _mm_unpackhi_epi16(step1_1, step1_3);
+    for (int i = 0; i < 64; i++) {
+        result[i] = temp[vunzip[i]];
+    }
 
-    *s0 = step2_0;
-    *s1 = step2_1;
-    *s2 = step2_2;
-    *s3 = step2_3;
+    *s0 = _mm_loadu_si128((const __m128i*) result);
+    *s1 = _mm_loadu_si128((const __m128i*) (result + 16));
+    *s2 = _mm_loadu_si128((const __m128i*) (result + 32));
+    *s3 = _mm_loadu_si128((const __m128i*) (result + 48));
 }
 
 static void

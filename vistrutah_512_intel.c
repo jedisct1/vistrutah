@@ -115,7 +115,7 @@ aes_inv_final_round(__m128i state, __m128i round_key)
     return _mm_aesdeclast_si128(state, round_key);
 }
 
-// SSE mixing layers - always available for fallback
+#ifndef VISTRUTAH_VAES
 static void
 mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 {
@@ -171,6 +171,7 @@ rotate_bytes(uint8_t* data, int shift, int len)
     }
     memcpy(data, temp, len);
 }
+#endif
 
 void
 vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8_t* key,
@@ -433,8 +434,6 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
 
         memcpy(round_keys[i], round_key, 64);
     }
-
-    __m512i fk = _mm512_loadu_si512((const __m512i*) fixed_key);
 
     uint8_t fk_imc_temp[64] __attribute__((aligned(64)));
     __m128i fk0_imc = _mm_aesimc_si128(_mm_loadu_si128((const __m128i*) fixed_key));

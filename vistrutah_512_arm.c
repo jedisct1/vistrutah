@@ -16,13 +16,25 @@ extern const uint8_t VISTRUTAH_ZERO[16];
 #    define INV_MIX_COLUMNS(A) vaesimcq_u8(A)
 
 static void
-rotate_bytes(uint8_t* data, int shift, int len)
+rotate_bytes(uint8_t* data, int shift, int len __attribute__((unused)))
 {
-    uint8_t temp[16];
-    for (int i = 0; i < len; i++) {
-        temp[i] = data[(i + shift) % len];
+    uint8x16_t v = vld1q_u8(data);
+
+    if (shift == 0) {
+        return;
+    } else if (shift == 5) {
+        v = vextq_u8(v, v, 5);
+    } else if (shift == 6) {
+        v = vextq_u8(v, v, 6);
+    } else if (shift == 10) {
+        v = vextq_u8(v, v, 10);
+    } else if (shift == 11) {
+        v = vextq_u8(v, v, 11);
+    } else {
+        v = vextq_u8(v, v, shift % 16);
     }
-    memcpy(data, temp, len);
+
+    vst1q_u8(data, v);
 }
 
 static void

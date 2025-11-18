@@ -65,33 +65,39 @@ aes_inv_final_round_256(__m256i state, __m256i round_key)
 static inline __m256i
 mixing_layer_256_avx2(__m256i state)
 {
-    uint8_t temp[32] __attribute__((aligned(32)));
-    uint8_t result[32] __attribute__((aligned(32)));
+    const __m256i even_mask = _mm256_set_epi8(
+        14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0,
+        14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0
+    );
+    const __m256i odd_mask = _mm256_set_epi8(
+        15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1,
+        15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1
+    );
 
-    _mm256_store_si256((__m256i*)temp, state);
+    __m256i even = _mm256_shuffle_epi8(state, even_mask);
+    __m256i odd  = _mm256_shuffle_epi8(state, odd_mask);
 
-    for (int i = 0; i < 16; i++) {
-        result[i]      = temp[2 * i];
-        result[16 + i] = temp[2 * i + 1];
-    }
+    __m128i even_lo = _mm256_castsi256_si128(even);
+    __m128i even_hi = _mm256_extracti128_si256(even, 1);
+    __m128i odd_lo  = _mm256_castsi256_si128(odd);
+    __m128i odd_hi  = _mm256_extracti128_si256(odd, 1);
 
-    return _mm256_load_si256((const __m256i*)result);
+    __m128i result0 = _mm_unpacklo_epi64(even_lo, even_hi);
+    __m128i result1 = _mm_unpacklo_epi64(odd_lo, odd_hi);
+
+    return _mm256_setr_m128i(result0, result1);
 }
 
 static inline __m256i
 inv_mixing_layer_256_avx2(__m256i state)
 {
-    uint8_t temp[32] __attribute__((aligned(32)));
-    uint8_t result[32] __attribute__((aligned(32)));
+    __m128i lo = _mm256_castsi256_si128(state);
+    __m128i hi = _mm256_extracti128_si256(state, 1);
 
-    _mm256_store_si256((__m256i*)temp, state);
+    __m128i result0 = _mm_unpacklo_epi8(lo, hi);
+    __m128i result1 = _mm_unpackhi_epi8(lo, hi);
 
-    for (int i = 0; i < 16; i++) {
-        result[2 * i]     = temp[i];
-        result[2 * i + 1] = temp[16 + i];
-    }
-
-    return _mm256_load_si256((const __m256i*)result);
+    return _mm256_setr_m128i(result0, result1);
 }
 
 #endif
@@ -124,46 +130,39 @@ aes_inv_final_round(__m128i state, __m128i round_key)
 static void
 mixing_layer_256(__m128i* s0, __m128i* s1)
 {
-    uint8_t temp[32];
-    _mm_storeu_si128((__m128i*) temp, *s0);
-    _mm_storeu_si128((__m128i*) (temp + 16), *s1);
+    __m128i t0 = *s0;
+    __m128i t1 = *s1;
 
-    uint8_t result[32];
-    for (int i = 0; i < 16; i++) {
-        result[i]      = temp[2 * i];
-        result[16 + i] = temp[2 * i + 1];
-    }
+    const __m128i even_mask = _mm_set_epi8(14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0);
+    const __m128i odd_mask  = _mm_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1);
 
-    *s0 = _mm_loadu_si128((const __m128i*) result);
-    *s1 = _mm_loadu_si128((const __m128i*) (result + 16));
+    __m128i s0_even = _mm_shuffle_epi8(t0, even_mask);
+    __m128i s1_even = _mm_shuffle_epi8(t1, even_mask);
+    __m128i s0_odd  = _mm_shuffle_epi8(t0, odd_mask);
+    __m128i s1_odd  = _mm_shuffle_epi8(t1, odd_mask);
+
+    *s0 = _mm_unpacklo_epi64(s0_even, s1_even);
+    *s1 = _mm_unpacklo_epi64(s0_odd, s1_odd);
 }
 #endif
 
 static void
 inv_mixing_layer_256(__m128i* s0, __m128i* s1)
 {
-    uint8_t temp[32];
-    _mm_storeu_si128((__m128i*) temp, *s0);
-    _mm_storeu_si128((__m128i*) (temp + 16), *s1);
+    __m128i t0 = *s0;
+    __m128i t1 = *s1;
 
-    uint8_t result[32];
-    for (int i = 0; i < 16; i++) {
-        result[2 * i]     = temp[i];
-        result[2 * i + 1] = temp[16 + i];
-    }
-
-    *s0 = _mm_loadu_si128((const __m128i*) result);
-    *s1 = _mm_loadu_si128((const __m128i*) (result + 16));
+    *s0 = _mm_unpacklo_epi8(t0, t1);
+    *s1 = _mm_unpackhi_epi8(t0, t1);
 }
 
 static void
-apply_permutation(const uint8_t* perm, uint8_t* data, int len)
+apply_permutation(const uint8_t* perm, uint8_t* data, int len __attribute__((unused)))
 {
-    uint8_t temp[16];
-    memcpy(temp, data, len);
-    for (int i = 0; i < len; i++) {
-        data[i] = temp[perm[i]];
-    }
+    __m128i d = _mm_loadu_si128((const __m128i*)data);
+    __m128i p = _mm_loadu_si128((const __m128i*)perm);
+    __m128i result = _mm_shuffle_epi8(d, p);
+    _mm_storeu_si128((__m128i*)data, result);
 }
 
 void

@@ -34,70 +34,106 @@ aes_inv_final_round(__m128i state, __m128i round_key)
     return _mm_aesdeclast_si128(state, round_key);
 }
 
-static const uint8_t vzip[64] __attribute__((aligned(64))) = {
-     0, 16, 32, 48,  1, 17, 33, 49,  2, 18, 34, 50,  3, 19, 35, 51,
-     8, 24, 40, 56,  9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59,
-     4, 20, 36, 52,  5, 21, 37, 53,  6, 22, 38, 54,  7, 23, 39, 55,
-    12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
-};
-
-static const uint8_t vunzip[64] __attribute__((aligned(64))) = {
-     0,  4,  8, 12, 32, 36, 40, 44, 16, 20, 24, 28, 48, 52, 56, 60,
-     1,  5,  9, 13, 33, 37, 41, 45, 17, 21, 25, 29, 49, 53, 57, 61,
-     2,  6, 10, 14, 34, 38, 42, 46, 18, 22, 26, 30, 50, 54, 58, 62,
-     3,  7, 11, 15, 35, 39, 43, 47, 19, 23, 27, 31, 51, 55, 59, 63
-};
-
 static void
 mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 {
-    uint8_t temp[64] __attribute__((aligned(64)));
-    uint8_t result[64] __attribute__((aligned(64)));
+    __m128i lo01, hi01, lo23, hi23;
 
-    _mm_store_si128((__m128i*) temp, *s0);
-    _mm_store_si128((__m128i*) (temp + 16), *s1);
-    _mm_store_si128((__m128i*) (temp + 32), *s2);
-    _mm_store_si128((__m128i*) (temp + 48), *s3);
+    lo01 = _mm_unpacklo_epi8(*s0, *s1);
+    hi01 = _mm_unpackhi_epi8(*s0, *s1);
+    lo23 = _mm_unpacklo_epi8(*s2, *s3);
+    hi23 = _mm_unpackhi_epi8(*s2, *s3);
 
-    for (int i = 0; i < 64; i++) {
-        result[i] = temp[vzip[i]];
-    }
-
-    *s0 = _mm_load_si128((const __m128i*) result);
-    *s1 = _mm_load_si128((const __m128i*) (result + 16));
-    *s2 = _mm_load_si128((const __m128i*) (result + 32));
-    *s3 = _mm_load_si128((const __m128i*) (result + 48));
+    *s0 = _mm_unpacklo_epi16(lo01, lo23);
+    *s2 = _mm_unpackhi_epi16(lo01, lo23);
+    *s1 = _mm_unpacklo_epi16(hi01, hi23);
+    *s3 = _mm_unpackhi_epi16(hi01, hi23);
 }
 
 static void
 inv_mixing_layer_512_sse(__m128i* s0, __m128i* s1, __m128i* s2, __m128i* s3)
 {
-    uint8_t temp[64] __attribute__((aligned(64)));
-    uint8_t result[64] __attribute__((aligned(64)));
+    const __m128i extract_mask = _mm_set_epi8(15,11,7,3, 14,10,6,2, 13,9,5,1, 12,8,4,0);
 
-    _mm_store_si128((__m128i*) temp, *s0);
-    _mm_store_si128((__m128i*) (temp + 16), *s1);
-    _mm_store_si128((__m128i*) (temp + 32), *s2);
-    _mm_store_si128((__m128i*) (temp + 48), *s3);
+    __m128i e0 = _mm_shuffle_epi8(*s0, extract_mask);
+    __m128i e1 = _mm_shuffle_epi8(*s1, extract_mask);
+    __m128i e2 = _mm_shuffle_epi8(*s2, extract_mask);
+    __m128i e3 = _mm_shuffle_epi8(*s3, extract_mask);
 
-    for (int i = 0; i < 64; i++) {
-        result[i] = temp[vunzip[i]];
-    }
+    __m128i t0 = _mm_unpacklo_epi32(e0, e2);
+    __m128i t1 = _mm_unpackhi_epi32(e0, e2);
+    __m128i t2 = _mm_unpacklo_epi32(e1, e3);
+    __m128i t3 = _mm_unpackhi_epi32(e1, e3);
 
-    *s0 = _mm_load_si128((const __m128i*) result);
-    *s1 = _mm_load_si128((const __m128i*) (result + 16));
-    *s2 = _mm_load_si128((const __m128i*) (result + 32));
-    *s3 = _mm_load_si128((const __m128i*) (result + 48));
+    *s0 = _mm_unpacklo_epi64(t0, t2);
+    *s1 = _mm_unpackhi_epi64(t0, t2);
+    *s2 = _mm_unpacklo_epi64(t1, t3);
+    *s3 = _mm_unpackhi_epi64(t1, t3);
 }
 
-static void
-rotate_bytes(uint8_t* data, int shift, int len)
+// Fast byte rotation using SSSE3 _mm_alignr_epi8
+static inline void
+rotate_bytes(uint8_t* data, int shift, int len __attribute__((unused)))
 {
-    uint8_t temp[16];
-    for (int i = 0; i < len; i++) {
-        temp[i] = data[(i + shift) % len];
+    __m128i v = _mm_loadu_si128((const __m128i*) data);
+    __m128i rotated;
+
+    // _mm_alignr_epi8 concatenates two vectors and extracts from the middle
+    // alignr(a, b, n) = (a << 128) | b >> (n*8)
+    // For rotation: alignr(v, v, shift) gives us v rotated left by shift bytes
+    switch (shift) {
+    case 0:
+        return;
+    case 1:
+        rotated = _mm_alignr_epi8(v, v, 1);
+        break;
+    case 2:
+        rotated = _mm_alignr_epi8(v, v, 2);
+        break;
+    case 3:
+        rotated = _mm_alignr_epi8(v, v, 3);
+        break;
+    case 4:
+        rotated = _mm_alignr_epi8(v, v, 4);
+        break;
+    case 5:
+        rotated = _mm_alignr_epi8(v, v, 5);
+        break;
+    case 6:
+        rotated = _mm_alignr_epi8(v, v, 6);
+        break;
+    case 7:
+        rotated = _mm_alignr_epi8(v, v, 7);
+        break;
+    case 8:
+        rotated = _mm_alignr_epi8(v, v, 8);
+        break;
+    case 9:
+        rotated = _mm_alignr_epi8(v, v, 9);
+        break;
+    case 10:
+        rotated = _mm_alignr_epi8(v, v, 10);
+        break;
+    case 11:
+        rotated = _mm_alignr_epi8(v, v, 11);
+        break;
+    case 12:
+        rotated = _mm_alignr_epi8(v, v, 12);
+        break;
+    case 13:
+        rotated = _mm_alignr_epi8(v, v, 13);
+        break;
+    case 14:
+        rotated = _mm_alignr_epi8(v, v, 14);
+        break;
+    case 15:
+        rotated = _mm_alignr_epi8(v, v, 15);
+        break;
+    default:
+        return;
     }
-    memcpy(data, temp, len);
+
+    _mm_storeu_si128((__m128i*) data, rotated);
 }
 
 void
@@ -206,14 +242,11 @@ vistrutah_512_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
 }
 
 // Helper to rotate backward (used for reverse key schedule)
-static void
+// Rotate backward is equivalent to rotate forward by (16 - shift)
+static inline void
 rotate_bytes_backward(uint8_t* data, int shift, int len)
 {
-    uint8_t temp[16];
-    for (int i = 0; i < len; i++) {
-        temp[i] = data[(i - shift + len) % len];
-    }
-    memcpy(data, temp, len);
+    rotate_bytes(data, len - shift, len);
 }
 
 void

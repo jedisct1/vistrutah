@@ -177,7 +177,6 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         memcpy(fixed_key, key, 32);
     }
 
-    // Compute final round key by applying forward permutations
     memcpy(round_key, fixed_key + 16, 16);
     memcpy(round_key + 16, fixed_key, 16);
 
@@ -200,7 +199,6 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     s0 = aes_inv_round(s0, fk0_imc);
     s1 = aes_inv_round(s1, fk1_imc);
 
-    // Process rounds in reverse, computing round keys backward using inverse permutations
     for (int i = steps - 1; i >= 1; i--) {
         apply_permutation(VISTRUTAH_P4_INV, round_key, 16);
         apply_permutation(VISTRUTAH_P5_INV, round_key + 16, 16);

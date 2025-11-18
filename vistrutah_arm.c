@@ -51,8 +51,8 @@ inv_mixing_layer_256(uint8x16_t* s0, uint8x16_t* s1)
 static void
 apply_permutation(const uint8_t* perm, uint8_t* data, int len __attribute__((unused)))
 {
-    uint8x16_t d = vld1q_u8(data);
-    uint8x16_t p = vld1q_u8(perm);
+    uint8x16_t d      = vld1q_u8(data);
+    uint8x16_t p      = vld1q_u8(perm);
     uint8x16_t result = vqtbl1q_u8(d, p);
     vst1q_u8(data, result);
 }

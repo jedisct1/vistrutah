@@ -20,18 +20,56 @@ rotate_bytes(uint8_t* data, int shift, int len __attribute__((unused)))
 {
     uint8x16_t v = vld1q_u8(data);
 
-    if (shift == 0) {
+    switch (shift) {
+    case 0:
         return;
-    } else if (shift == 5) {
+    case 1:
+        v = vextq_u8(v, v, 1);
+        break;
+    case 2:
+        v = vextq_u8(v, v, 2);
+        break;
+    case 3:
+        v = vextq_u8(v, v, 3);
+        break;
+    case 4:
+        v = vextq_u8(v, v, 4);
+        break;
+    case 5:
         v = vextq_u8(v, v, 5);
-    } else if (shift == 6) {
+        break;
+    case 6:
         v = vextq_u8(v, v, 6);
-    } else if (shift == 10) {
+        break;
+    case 7:
+        v = vextq_u8(v, v, 7);
+        break;
+    case 8:
+        v = vextq_u8(v, v, 8);
+        break;
+    case 9:
+        v = vextq_u8(v, v, 9);
+        break;
+    case 10:
         v = vextq_u8(v, v, 10);
-    } else if (shift == 11) {
+        break;
+    case 11:
         v = vextq_u8(v, v, 11);
-    } else {
-        v = vextq_u8(v, v, shift % 16);
+        break;
+    case 12:
+        v = vextq_u8(v, v, 12);
+        break;
+    case 13:
+        v = vextq_u8(v, v, 13);
+        break;
+    case 14:
+        v = vextq_u8(v, v, 14);
+        break;
+    case 15:
+        v = vextq_u8(v, v, 15);
+        break;
+    default:
+        return; // Invalid shift value
     }
 
     vst1q_u8(data, v);
@@ -40,12 +78,12 @@ rotate_bytes(uint8_t* data, int shift, int len __attribute__((unused)))
 static void
 mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 {
-    uint8x16x4_t table = {*s0, *s1, *s2, *s3};
+    uint8x16x4_t table = { *s0, *s1, *s2, *s3 };
 
-    const uint8_t idx0_data[16] = {0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60};
-    const uint8_t idx1_data[16] = {1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61};
-    const uint8_t idx2_data[16] = {2, 6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58, 62};
-    const uint8_t idx3_data[16] = {3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63};
+    const uint8_t idx0_data[16] = { 0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60 };
+    const uint8_t idx1_data[16] = { 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61 };
+    const uint8_t idx2_data[16] = { 2, 6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58, 62 };
+    const uint8_t idx3_data[16] = { 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63 };
 
     uint8x16_t idx0 = vld1q_u8(idx0_data);
     uint8x16_t idx1 = vld1q_u8(idx1_data);
@@ -61,12 +99,14 @@ mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 static void
 inv_mixing_layer_512(uint8x16_t* s0, uint8x16_t* s1, uint8x16_t* s2, uint8x16_t* s3)
 {
-    uint8x16x4_t table = {*s0, *s1, *s2, *s3};
+    uint8x16x4_t table = { *s0, *s1, *s2, *s3 };
 
-    const uint8_t idx0_data[16] = {0, 16, 32, 48, 1, 17, 33, 49, 2,  18, 34, 50, 3,  19, 35, 51};
-    const uint8_t idx1_data[16] = {4, 20, 36, 52, 5, 21, 37, 53, 6,  22, 38, 54, 7,  23, 39, 55};
-    const uint8_t idx2_data[16] = {8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59};
-    const uint8_t idx3_data[16] = {12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63};
+    const uint8_t idx0_data[16] = { 0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51 };
+    const uint8_t idx1_data[16] = { 4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55 };
+    const uint8_t idx2_data[16] = { 8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59 };
+    const uint8_t idx3_data[16] = {
+        12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
+    };
 
     uint8x16_t idx0 = vld1q_u8(idx0_data);
     uint8x16_t idx1 = vld1q_u8(idx1_data);

@@ -5,9 +5,9 @@
 #include <time.h>
 
 #ifdef __MACH__
-#include <mach/mach_time.h>
+#    include <mach/mach_time.h>
 static mach_timebase_info_data_t timebase_info;
-static int timebase_initialized = 0;
+static int                       timebase_initialized = 0;
 
 static inline uint64_t
 get_nanos()
@@ -71,9 +71,27 @@ get_stats(double *samples, int n)
 static void
 init_random_data(uint8_t *data, size_t size)
 {
+    if (data == NULL) {
+        fprintf(stderr, "Error: NULL pointer passed to init_random_data\n");
+        exit(1);
+    }
     for (size_t i = 0; i < size; i++) {
         data[i] = (uint8_t) rand();
     }
+}
+
+// Safe aligned allocation (size must be multiple of alignment on some platforms)
+static void *
+safe_aligned_alloc(size_t alignment, size_t size)
+{
+    // Round up size to be a multiple of alignment
+    size_t aligned_size = ((size + alignment - 1) / alignment) * alignment;
+    void  *ptr          = aligned_alloc(alignment, aligned_size);
+    if (ptr == NULL) {
+        fprintf(stderr, "Error: aligned_alloc failed for size %zu\n", size);
+        exit(1);
+    }
+    return ptr;
 }
 
 // Benchmark throughput (large data)
@@ -85,8 +103,8 @@ benchmark_throughput_256(const char *label, const uint8_t *key, int key_size, in
     const int BLOCK_SIZE  = 32;
     const int NUM_SAMPLES = 10;
 
-    uint8_t *data   = aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
-    uint8_t *output = aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
+    uint8_t *data   = safe_aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
+    uint8_t *output = safe_aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
 
     init_random_data(data, NUM_BLOCKS * BLOCK_SIZE);
 
@@ -136,8 +154,8 @@ benchmark_throughput_512(const char *label, const uint8_t *key, int key_size, in
     const int BLOCK_SIZE  = 64;
     const int NUM_SAMPLES = 10;
 
-    uint8_t *data   = aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
-    uint8_t *output = aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
+    uint8_t *data   = safe_aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
+    uint8_t *output = safe_aligned_alloc(64, NUM_BLOCKS * BLOCK_SIZE);
 
     init_random_data(data, NUM_BLOCKS * BLOCK_SIZE);
 
@@ -272,8 +290,8 @@ benchmark_small_messages()
     printf("==================================================\n");
 
     const int   message_sizes[] = { 32, 64, 128, 256, 512, 1024, 4096, 16384 };
-    const char *size_names[]    = { "32B (1 block)",  "64B (2 blocks)", "128B (4 blocks)",
-                                    "256B (8 blocks)", "512B (16 blocks)", "1KB (32 blocks)",
+    const char *size_names[]    = { "32B (1 block)",    "64B (2 blocks)",   "128B (4 blocks)",
+                                    "256B (8 blocks)",  "512B (16 blocks)", "1KB (32 blocks)",
                                     "4KB (128 blocks)", "16KB (512 blocks)" };
     const int   num_sizes       = 8;
 
@@ -297,8 +315,8 @@ benchmark_small_messages()
         }
 
         const int NUM_SAMPLES = 10;
-        uint8_t  *input       = aligned_alloc(64, msg_size);
-        uint8_t  *output      = aligned_alloc(64, msg_size);
+        uint8_t  *input       = safe_aligned_alloc(64, msg_size);
+        uint8_t  *output      = safe_aligned_alloc(64, msg_size);
 
         init_random_data(input, msg_size);
 

@@ -36,7 +36,7 @@ vistrutah_get_impl_name(void)
 #    endif
 }
 
-#ifdef VISTRUTAH_VAES
+#    ifdef VISTRUTAH_VAES
 
 static inline __m256i
 aes_round_256(__m256i state, __m256i round_key)
@@ -65,14 +65,10 @@ aes_inv_final_round_256(__m256i state, __m256i round_key)
 static inline __m256i
 mixing_layer_256_avx2(__m256i state)
 {
-    const __m256i even_mask = _mm256_set_epi8(
-        14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0,
-        14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0
-    );
-    const __m256i odd_mask = _mm256_set_epi8(
-        15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1,
-        15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1
-    );
+    const __m256i even_mask = _mm256_set_epi8(14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0,
+                                              14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0);
+    const __m256i odd_mask  = _mm256_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1,
+                                              15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1);
 
     __m256i even = _mm256_shuffle_epi8(state, even_mask);
     __m256i odd  = _mm256_shuffle_epi8(state, odd_mask);
@@ -100,7 +96,7 @@ inv_mixing_layer_256_avx2(__m256i state)
     return _mm256_setr_m128i(result0, result1);
 }
 
-#endif
+#    endif
 
 static inline __m128i
 aes_round(__m128i state, __m128i round_key)
@@ -126,7 +122,7 @@ aes_inv_final_round(__m128i state, __m128i round_key)
     return _mm_aesdeclast_si128(state, round_key);
 }
 
-#ifndef VISTRUTAH_VAES
+#    ifndef VISTRUTAH_VAES
 static void
 mixing_layer_256(__m128i* s0, __m128i* s1)
 {
@@ -144,7 +140,7 @@ mixing_layer_256(__m128i* s0, __m128i* s1)
     *s0 = _mm_unpacklo_epi64(s0_even, s1_even);
     *s1 = _mm_unpacklo_epi64(s0_odd, s1_odd);
 }
-#endif
+#    endif
 
 static void
 inv_mixing_layer_256(__m128i* s0, __m128i* s1)
@@ -159,17 +155,17 @@ inv_mixing_layer_256(__m128i* s0, __m128i* s1)
 static void
 apply_permutation(const uint8_t* perm, uint8_t* data, int len __attribute__((unused)))
 {
-    __m128i d = _mm_loadu_si128((const __m128i*)data);
-    __m128i p = _mm_loadu_si128((const __m128i*)perm);
+    __m128i d      = _mm_loadu_si128((const __m128i*) data);
+    __m128i p      = _mm_loadu_si128((const __m128i*) perm);
     __m128i result = _mm_shuffle_epi8(d, p);
-    _mm_storeu_si128((__m128i*)data, result);
+    _mm_storeu_si128((__m128i*) data, result);
 }
 
 void
 vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8_t* key,
                       int key_size, int rounds)
 {
-#ifdef VISTRUTAH_VAES
+#    ifdef VISTRUTAH_VAES
     uint8_t fixed_key[32] __attribute__((aligned(32)));
     uint8_t round_key[32] __attribute__((aligned(32)));
     int     steps = rounds / ROUNDS_PER_STEP;
@@ -201,12 +197,12 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
         apply_permutation(VISTRUTAH_P4, round_key, 16);
         apply_permutation(VISTRUTAH_P5, round_key + 16, 16);
 
-        rk = _mm256_loadu_si256((const __m256i*) round_key);
+        rk    = _mm256_loadu_si256((const __m256i*) round_key);
         state = _mm256_xor_si256(state, rk);
 
-        __m128i rc  = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
+        __m128i rc     = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
         __m256i rc_256 = _mm256_castsi128_si256(rc);
-        state = _mm256_xor_si256(state, rc_256);
+        state          = _mm256_xor_si256(state, rc_256);
 
         state = aes_round_256(state, fk);
     }
@@ -214,11 +210,11 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
     apply_permutation(VISTRUTAH_P4, round_key, 16);
     apply_permutation(VISTRUTAH_P5, round_key + 16, 16);
 
-    rk = _mm256_loadu_si256((const __m256i*) round_key);
+    rk    = _mm256_loadu_si256((const __m256i*) round_key);
     state = aes_final_round_256(state, rk);
 
     _mm256_storeu_si256((__m256i*) ciphertext, state);
-#else
+#    else
     uint8_t fixed_key[32];
     uint8_t round_key[32];
     int     steps = rounds / ROUNDS_PER_STEP;
@@ -280,7 +276,7 @@ vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8
 
     _mm_storeu_si128((__m128i*) ciphertext, s0);
     _mm_storeu_si128((__m128i*) (ciphertext + 16), s1);
-#endif
+#    endif
 }
 
 void

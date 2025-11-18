@@ -97,4 +97,13 @@ void vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext,
 bool vistrutah_has_aes_accel(void);
 const char* vistrutah_get_impl_name(void);
 
+// External constants (defined in vistrutah_common.c)
+extern const uint8_t ROUND_CONSTANTS[16 * 48];
+extern const uint8_t VISTRUTAH_P4[16];
+extern const uint8_t VISTRUTAH_P5[16];
+extern const uint8_t VISTRUTAH_P4_INV[16];
+extern const uint8_t VISTRUTAH_P5_INV[16];
+extern const uint8_t VISTRUTAH_KEXP_SHUFFLE[32];
+extern const uint8_t VISTRUTAH_ZERO[16];
+
 #endif // VISTRUTAH_PORTABLE_H

@@ -101,6 +101,8 @@ safe_aligned_alloc(size_t alignment, size_t size)
     return ptr;
 }
 
+static volatile uint64_t g_benchmark_checksum = 0;
+
 // Benchmark throughput (large data)
 static void
 benchmark_throughput_256(const char *label, const uint8_t *key, int key_size, int rounds,
@@ -115,7 +117,6 @@ benchmark_throughput_256(const char *label, const uint8_t *key, int key_size, in
 
     init_random_data(data, NUM_BLOCKS * BLOCK_SIZE);
 
-    // Warmup
     for (int i = 0; i < 1000; i++) {
         if (encrypt) {
             vistrutah_256_encrypt(data, output, key, key_size, rounds);
@@ -140,7 +141,8 @@ benchmark_throughput_256(const char *label, const uint8_t *key, int key_size, in
         uint64_t end     = get_nanos();
         double   elapsed = (end - start) / 1e9;
 
-        // Calculate throughput in MB/s
+        g_benchmark_checksum += output[0];
+
         samples[s] = (NUM_BLOCKS * BLOCK_SIZE / (1024.0 * 1024.0)) / elapsed;
     }
 
@@ -166,7 +168,6 @@ benchmark_throughput_512(const char *label, const uint8_t *key, int key_size, in
 
     init_random_data(data, NUM_BLOCKS * BLOCK_SIZE);
 
-    // Warmup
     for (int i = 0; i < 1000; i++) {
         if (encrypt) {
             vistrutah_512_encrypt(data, output, key, key_size, rounds);
@@ -190,6 +191,8 @@ benchmark_throughput_512(const char *label, const uint8_t *key, int key_size, in
         }
         uint64_t end     = get_nanos();
         double   elapsed = (end - start) / 1e9;
+
+        g_benchmark_checksum += output[0];
 
         samples[s] = (NUM_BLOCKS * BLOCK_SIZE / (1024.0 * 1024.0)) / elapsed;
     }
@@ -215,7 +218,6 @@ benchmark_latency_256(const char *label, const uint8_t *key, int key_size, int r
 
     init_random_data(block, 32);
 
-    // Warmup
     for (int i = 0; i < 10000; i++) {
         if (encrypt) {
             vistrutah_256_encrypt(block, output, key, key_size, rounds);
@@ -237,7 +239,8 @@ benchmark_latency_256(const char *label, const uint8_t *key, int key_size, int r
         }
         uint64_t end = get_nanos();
 
-        // Calculate ns per operation
+        g_benchmark_checksum += output[0];
+
         samples[s] = (double) (end - start) / NUM_ITERATIONS;
     }
 
@@ -258,7 +261,6 @@ benchmark_latency_512(const char *label, const uint8_t *key, int key_size, int r
 
     init_random_data(block, 64);
 
-    // Warmup
     for (int i = 0; i < 10000; i++) {
         if (encrypt) {
             vistrutah_512_encrypt(block, output, key, key_size, rounds);
@@ -280,6 +282,8 @@ benchmark_latency_512(const char *label, const uint8_t *key, int key_size, int r
         }
         uint64_t end = get_nanos();
 
+        g_benchmark_checksum += output[0];
+
         samples[s] = (double) (end - start) / NUM_ITERATIONS;
     }
 
@@ -291,11 +295,8 @@ benchmark_latency_512(const char *label, const uint8_t *key, int key_size, int r
 
 #if defined(VISTRUTAH_INTEL)
 static inline void
-aes128_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key)
+aes128_key_expansion(const uint8_t *key, __m128i *rk)
 {
-    __m128i state = _mm_loadu_si128((const __m128i*) plaintext);
-    __m128i rk[11];
-
     rk[0] = _mm_loadu_si128((const __m128i*) key);
 
     __m128i temp1 = rk[0];
@@ -370,6 +371,12 @@ aes128_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key
     temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[10] = _mm_xor_si128(temp1, temp2);
+}
+
+static inline void
+aes128_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, const __m128i *rk)
+{
+    __m128i state = _mm_loadu_si128((const __m128i*) plaintext);
 
     state = _mm_xor_si128(state, rk[0]);
     state = _mm_aesenc_si128(state, rk[1]);
@@ -387,11 +394,8 @@ aes128_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key
 }
 
 static inline void
-aes256_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key)
+aes256_key_expansion(const uint8_t *key, __m128i *rk)
 {
-    __m128i state = _mm_loadu_si128((const __m128i*) plaintext);
-    __m128i rk[15];
-
     rk[0] = _mm_loadu_si128((const __m128i*) key);
     rk[1] = _mm_loadu_si128((const __m128i*) (key + 16));
 
@@ -489,6 +493,12 @@ aes256_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key
     temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     temp1 = _mm_xor_si128(temp1, _mm_slli_si128(temp1, 4));
     rk[14] = _mm_xor_si128(temp1, temp3);
+}
+
+static inline void
+aes256_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, const __m128i *rk)
+{
+    __m128i state = _mm_loadu_si128((const __m128i*) plaintext);
 
     state = _mm_xor_si128(state, rk[0]);
     state = _mm_aesenc_si128(state, rk[1]);
@@ -521,11 +531,18 @@ benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
 
     init_random_data(data, NUM_BLOCKS * BLOCK_SIZE);
 
+    __m128i rk[15];
+    if (key_size == 16) {
+        aes128_key_expansion(key, rk);
+    } else {
+        aes256_key_expansion(key, rk);
+    }
+
     for (int i = 0; i < 1000; i++) {
         if (key_size == 16) {
-            aes128_encrypt(data, output, key);
+            aes128_encrypt_with_schedule(data, output, rk);
         } else {
-            aes256_encrypt(data, output, key);
+            aes256_encrypt_with_schedule(data, output, rk);
         }
     }
 
@@ -535,13 +552,15 @@ benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
         uint64_t start = get_nanos();
         for (int i = 0; i < NUM_BLOCKS; i++) {
             if (key_size == 16) {
-                aes128_encrypt(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, key);
+                aes128_encrypt_with_schedule(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, rk);
             } else {
-                aes256_encrypt(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, key);
+                aes256_encrypt_with_schedule(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, rk);
             }
         }
         uint64_t end     = get_nanos();
         double   elapsed = (end - start) / 1e9;
+
+        g_benchmark_checksum += output[0];
 
         samples[s] = (NUM_BLOCKS * BLOCK_SIZE / (1024.0 * 1024.0)) / elapsed;
     }
@@ -556,11 +575,8 @@ benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
 }
 #elif defined(VISTRUTAH_ARM)
 static inline void
-aes128_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key)
+aes128_key_expansion(const uint8_t *key, uint8x16_t *rk)
 {
-    uint8x16_t state = vld1q_u8(plaintext);
-    uint8x16_t rk[11];
-
     rk[0] = vld1q_u8(key);
 
     static const uint8_t rcon[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
@@ -594,6 +610,12 @@ aes128_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key
 
         rk[i+1] = temp;
     }
+}
+
+static inline void
+aes128_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, const uint8x16_t *rk)
+{
+    uint8x16_t state = vld1q_u8(plaintext);
 
     state = veorq_u8(state, rk[0]);
     state = vaesmcq_u8(vaeseq_u8(vmovq_n_u8(0), state));
@@ -621,11 +643,8 @@ aes128_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key
 }
 
 static inline void
-aes256_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key)
+aes256_key_expansion(const uint8_t *key, uint8x16_t *rk)
 {
-    uint8x16_t state = vld1q_u8(plaintext);
-    uint8x16_t rk[15];
-
     rk[0] = vld1q_u8(key);
     rk[1] = vld1q_u8(key + 16);
 
@@ -682,6 +701,12 @@ aes256_encrypt(const uint8_t *plaintext, uint8_t *ciphertext, const uint8_t *key
             rk[i*2 + 3] = vreinterpretq_u8_u32(temp2_u32);
         }
     }
+}
+
+static inline void
+aes256_encrypt_with_schedule(const uint8_t *plaintext, uint8_t *ciphertext, const uint8x16_t *rk)
+{
+    uint8x16_t state = vld1q_u8(plaintext);
 
     state = veorq_u8(state, rk[0]);
     for (int i = 1; i < 14; i++) {
@@ -706,11 +731,18 @@ benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
 
     init_random_data(data, NUM_BLOCKS * BLOCK_SIZE);
 
+    uint8x16_t rk[15];
+    if (key_size == 16) {
+        aes128_key_expansion(key, rk);
+    } else {
+        aes256_key_expansion(key, rk);
+    }
+
     for (int i = 0; i < 1000; i++) {
         if (key_size == 16) {
-            aes128_encrypt(data, output, key);
+            aes128_encrypt_with_schedule(data, output, rk);
         } else {
-            aes256_encrypt(data, output, key);
+            aes256_encrypt_with_schedule(data, output, rk);
         }
     }
 
@@ -720,13 +752,15 @@ benchmark_aes_throughput(const char *label, const uint8_t *key, int key_size)
         uint64_t start = get_nanos();
         for (int i = 0; i < NUM_BLOCKS; i++) {
             if (key_size == 16) {
-                aes128_encrypt(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, key);
+                aes128_encrypt_with_schedule(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, rk);
             } else {
-                aes256_encrypt(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, key);
+                aes256_encrypt_with_schedule(data + i * BLOCK_SIZE, output + i * BLOCK_SIZE, rk);
             }
         }
         uint64_t end     = get_nanos();
         double   elapsed = (end - start) / 1e9;
+
+        g_benchmark_checksum += output[0];
 
         samples[s] = (NUM_BLOCKS * BLOCK_SIZE / (1024.0 * 1024.0)) / elapsed;
     }
@@ -769,7 +803,6 @@ benchmark_small_messages()
         int msg_size   = message_sizes[sz];
         int num_blocks = msg_size / 32;
 
-        // Adjust iterations to keep total time reasonable
         int iterations;
         if (msg_size <= 256) {
             iterations = 1000000;
@@ -787,7 +820,6 @@ benchmark_small_messages()
 
         init_random_data(input, msg_size);
 
-        // Warmup
         for (int i = 0; i < 1000; i++) {
             for (int b = 0; b < num_blocks; b++) {
                 vistrutah_256_encrypt(input + b * 32, output + b * 32, key, 32,
@@ -808,7 +840,8 @@ benchmark_small_messages()
             uint64_t end     = get_nanos();
             double   elapsed = (end - start) / 1e9;
 
-            // Throughput in MB/s
+            g_benchmark_checksum += output[0];
+
             samples[s] = ((double) msg_size * iterations / (1024.0 * 1024.0)) / elapsed;
         }
 

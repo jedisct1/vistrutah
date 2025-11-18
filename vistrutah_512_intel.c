@@ -387,10 +387,110 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
                       int key_size, int rounds)
 {
 #ifdef VISTRUTAH_VAES
-    // AVX-512 + VAES optimized version (simplified - just use SSE for now)
-    // TODO: Implement full AVX-512 optimized decrypt
-#endif
-    // SSE fallback version
+    uint8_t fixed_key[64] __attribute__((aligned(64)));
+    uint8_t round_key[64] __attribute__((aligned(64)));
+    uint8_t round_keys[48][64] __attribute__((aligned(64)));
+    int     steps = rounds / ROUNDS_PER_STEP;
+
+    __m512i state = _mm512_loadu_si512((const __m512i*) ciphertext);
+
+    if (key_size == 32) {
+        memcpy(fixed_key, key, 32);
+        memcpy(fixed_key + 32, key, 32);
+    } else {
+        memcpy(fixed_key, key, 64);
+    }
+
+    if (key_size == 64) {
+        uint8_t temp[32];
+        memcpy(temp, fixed_key + 32, 32);
+        for (int i = 0; i < 32; i++) {
+            fixed_key[32 + i] = temp[VISTRUTAH_KEXP_SHUFFLE[i]];
+        }
+    }
+
+    memcpy(round_key, fixed_key + 16, 16);
+    memcpy(round_key + 16, fixed_key, 16);
+    memcpy(round_key + 32, fixed_key + 48, 16);
+    memcpy(round_key + 48, fixed_key + 32, 16);
+    memcpy(round_keys[0], round_key, 64);
+
+    for (int i = 1; i <= steps; i++) {
+        __m128i rk0 = _mm_loadu_si128((const __m128i*) round_key);
+        __m128i rk1 = _mm_loadu_si128((const __m128i*) (round_key + 16));
+        __m128i rk2 = _mm_loadu_si128((const __m128i*) (round_key + 32));
+        __m128i rk3 = _mm_loadu_si128((const __m128i*) (round_key + 48));
+
+        rk0 = rotate_bytes_128(rk0, 5);
+        rk1 = rotate_bytes_128(rk1, 10);
+        rk2 = rotate_bytes_128(rk2, 5);
+        rk3 = rotate_bytes_128(rk3, 10);
+
+        _mm_storeu_si128((__m128i*) round_key, rk0);
+        _mm_storeu_si128((__m128i*) (round_key + 16), rk1);
+        _mm_storeu_si128((__m128i*) (round_key + 32), rk2);
+        _mm_storeu_si128((__m128i*) (round_key + 48), rk3);
+
+        memcpy(round_keys[i], round_key, 64);
+    }
+
+    __m512i fk = _mm512_loadu_si512((const __m512i*) fixed_key);
+
+    uint8_t fk_imc_temp[64] __attribute__((aligned(64)));
+    __m128i fk0_imc = _mm_aesimc_si128(_mm_loadu_si128((const __m128i*) fixed_key));
+    __m128i fk1_imc = _mm_aesimc_si128(_mm_loadu_si128((const __m128i*) (fixed_key + 16)));
+    __m128i fk2_imc = _mm_aesimc_si128(_mm_loadu_si128((const __m128i*) (fixed_key + 32)));
+    __m128i fk3_imc = _mm_aesimc_si128(_mm_loadu_si128((const __m128i*) (fixed_key + 48)));
+    _mm_storeu_si128((__m128i*) fk_imc_temp, fk0_imc);
+    _mm_storeu_si128((__m128i*) (fk_imc_temp + 16), fk1_imc);
+    _mm_storeu_si128((__m128i*) (fk_imc_temp + 32), fk2_imc);
+    _mm_storeu_si128((__m128i*) (fk_imc_temp + 48), fk3_imc);
+    __m512i fk_imc = _mm512_load_si512((const __m512i*)fk_imc_temp);
+
+    __m512i rk = _mm512_loadu_si512((const __m512i*) round_keys[steps]);
+
+    state = _mm512_xor_si512(state, rk);
+    state = aes_inv_round_512(state, fk_imc);
+
+    for (int i = steps - 1; i >= 1; i--) {
+        rk = _mm512_loadu_si512((const __m512i*) round_keys[i]);
+
+        state = aes_inv_final_round_512(state, rk);
+
+        __m128i rc  = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
+        __m512i rc_512 = _mm512_castsi128_si512(rc);
+        state = _mm512_xor_si512(state, rc_512);
+
+        state = inv_mixing_layer_512(state);
+
+        uint8_t temp[64] __attribute__((aligned(64)));
+        _mm512_store_si512((__m512i*)temp, state);
+
+        __m128i s0 = _mm_loadu_si128((const __m128i*) temp);
+        __m128i s1 = _mm_loadu_si128((const __m128i*) (temp + 16));
+        __m128i s2 = _mm_loadu_si128((const __m128i*) (temp + 32));
+        __m128i s3 = _mm_loadu_si128((const __m128i*) (temp + 48));
+
+        s0 = _mm_aesimc_si128(s0);
+        s1 = _mm_aesimc_si128(s1);
+        s2 = _mm_aesimc_si128(s2);
+        s3 = _mm_aesimc_si128(s3);
+
+        _mm_storeu_si128((__m128i*) temp, s0);
+        _mm_storeu_si128((__m128i*) (temp + 16), s1);
+        _mm_storeu_si128((__m128i*) (temp + 32), s2);
+        _mm_storeu_si128((__m128i*) (temp + 48), s3);
+
+        state = _mm512_load_si512((const __m512i*)temp);
+
+        state = aes_inv_round_512(state, fk_imc);
+    }
+
+    rk = _mm512_loadu_si512((const __m512i*) round_keys[0]);
+    state = aes_inv_final_round_512(state, rk);
+
+    _mm512_storeu_si512((__m512i*) plaintext, state);
+#else
     uint8_t fixed_key[64];
     uint8_t round_key[64];
     uint8_t round_keys[48][64];
@@ -499,6 +599,7 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     _mm_storeu_si128((__m128i*) (plaintext + 16), s1);
     _mm_storeu_si128((__m128i*) (plaintext + 32), s2);
     _mm_storeu_si128((__m128i*) (plaintext + 48), s3);
+#endif
 }
 
 #endif

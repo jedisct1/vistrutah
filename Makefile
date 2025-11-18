@@ -56,9 +56,9 @@ endif
 LDFLAGS = 
 
 # Source files
-TEST_SOURCES = test_vistrutah_portable.c
-BENCH_SOURCES = benchmark_portable.c
-HEADERS = vistrutah_portable.h
+TEST_SOURCES = test_vistrutah.c
+BENCH_SOURCES = benchmark.c
+HEADERS = vistrutah.h
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)

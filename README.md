@@ -120,7 +120,7 @@ Short variants (reduced rounds) are intended for use in modes like HCTR2 where t
 ### Basic Encryption/Decryption
 
 ```c
-#include "vistrutah_portable.h"
+#include "vistrutah.h"
 
 // Vistrutah-256 with 256-bit key
 uint8_t key[32] = {...};

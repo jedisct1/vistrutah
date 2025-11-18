@@ -1,4 +1,4 @@
-#include "vistrutah_portable.h"
+#include "vistrutah.h"
 
 // Round constants for Vistrutah (48 blocks of 16 bytes each, 768 bytes total)
 // Derived from mathematical constants (digits of pi, etc.)

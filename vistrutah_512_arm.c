@@ -13,6 +13,7 @@ extern const uint8_t VISTRUTAH_ZERO[16];
 #    define AES_ENC_LAST(A, B) veorq_u8(vaeseq_u8(vmovq_n_u8(0), (A)), (B))
 #    define AES_DEC(A, B)      veorq_u8(vaesimcq_u8(vaesdq_u8(vmovq_n_u8(0), (A))), (B))
 #    define AES_DEC_LAST(A, B) veorq_u8(vaesdq_u8(vmovq_n_u8(0), (A)), (B))
+#    define INV_MIX_COLUMNS(A) vaesimcq_u8(A)
 
 static void
 rotate_bytes(uint8_t* data, int shift, int len)
@@ -183,7 +184,6 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
 {
     uint8_t fixed_key[64];
     uint8_t round_key[64];
-    uint8_t round_keys[48][64];
     int     steps = rounds / ROUNDS_PER_STEP;
 
     uint8x16_t s0 = vld1q_u8(ciphertext);
@@ -210,73 +210,83 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     memcpy(round_key + 16, fixed_key, 16);
     memcpy(round_key + 32, fixed_key + 48, 16);
     memcpy(round_key + 48, fixed_key + 32, 16);
-    memcpy(round_keys[0], round_key, 64);
 
-    for (int i = 1; i <= steps; i++) {
-        rotate_bytes(round_key, 5, 16);
-        rotate_bytes(round_key + 16, 10, 16);
-        rotate_bytes(round_key + 32, 5, 16);
-        rotate_bytes(round_key + 48, 10, 16);
-        memcpy(round_keys[i], round_key, 64);
-    }
+    rotate_bytes(round_key, (5 * steps) % 16, 16);
+    rotate_bytes(round_key + 16, (10 * steps) % 16, 16);
+    rotate_bytes(round_key + 32, (5 * steps) % 16, 16);
+    rotate_bytes(round_key + 48, (10 * steps) % 16, 16);
 
     uint8x16_t fk0 = vld1q_u8(fixed_key);
     uint8x16_t fk1 = vld1q_u8(fixed_key + 16);
     uint8x16_t fk2 = vld1q_u8(fixed_key + 32);
     uint8x16_t fk3 = vld1q_u8(fixed_key + 48);
-    uint8x16_t zero = vmovq_n_u8(0);
 
-    uint8x16_t rk0 = vld1q_u8(round_keys[steps]);
-    uint8x16_t rk1 = vld1q_u8(round_keys[steps] + 16);
-    uint8x16_t rk2 = vld1q_u8(round_keys[steps] + 32);
-    uint8x16_t rk3 = vld1q_u8(round_keys[steps] + 48);
+    fk0 = INV_MIX_COLUMNS(fk0);
+    fk1 = INV_MIX_COLUMNS(fk1);
+    fk2 = INV_MIX_COLUMNS(fk2);
+    fk3 = INV_MIX_COLUMNS(fk3);
 
-    s0 = AES_DEC_LAST(s0, rk0);
-    s1 = AES_DEC_LAST(s1, rk1);
-    s2 = AES_DEC_LAST(s2, rk2);
-    s3 = AES_DEC_LAST(s3, rk3);
+    uint8x16_t rk0 = vld1q_u8(round_key);
+    uint8x16_t rk1 = vld1q_u8(round_key + 16);
+    uint8x16_t rk2 = vld1q_u8(round_key + 32);
+    uint8x16_t rk3 = vld1q_u8(round_key + 48);
 
-    for (int i = steps - 1; i >= 1; i--) {
-        s0 = AES_DEC(s0, fk0);
-        s1 = AES_DEC(s1, fk1);
-        s2 = AES_DEC(s2, fk2);
-        s3 = AES_DEC(s3, fk3);
-
-        uint8x16_t rc = vld1q_u8(&ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = veorq_u8(s0, rc);
-
-        rk0 = vld1q_u8(round_keys[i]);
-        rk1 = vld1q_u8(round_keys[i] + 16);
-        rk2 = vld1q_u8(round_keys[i] + 32);
-        rk3 = vld1q_u8(round_keys[i] + 48);
-
-        s0 = veorq_u8(s0, rk0);
-        s1 = veorq_u8(s1, rk1);
-        s2 = veorq_u8(s2, rk2);
-        s3 = veorq_u8(s3, rk3);
-
-        inv_mixing_layer_512(&s0, &s1, &s2, &s3);
-
-        s0 = AES_DEC(s0, zero);
-        s1 = AES_DEC(s1, zero);
-        s2 = AES_DEC(s2, zero);
-        s3 = AES_DEC(s3, zero);
-    }
+    s0 = veorq_u8(s0, rk0);
+    s1 = veorq_u8(s1, rk1);
+    s2 = veorq_u8(s2, rk2);
+    s3 = veorq_u8(s3, rk3);
 
     s0 = AES_DEC(s0, fk0);
     s1 = AES_DEC(s1, fk1);
     s2 = AES_DEC(s2, fk2);
     s3 = AES_DEC(s3, fk3);
 
-    rk0 = vld1q_u8(round_keys[0]);
-    rk1 = vld1q_u8(round_keys[0] + 16);
-    rk2 = vld1q_u8(round_keys[0] + 32);
-    rk3 = vld1q_u8(round_keys[0] + 48);
+    for (int i = 1; i < steps; i++) {
+        rotate_bytes(round_key, 11, 16);
+        rotate_bytes(round_key + 16, 6, 16);
+        rotate_bytes(round_key + 32, 11, 16);
+        rotate_bytes(round_key + 48, 6, 16);
 
-    s0 = veorq_u8(s0, rk0);
-    s1 = veorq_u8(s1, rk1);
-    s2 = veorq_u8(s2, rk2);
-    s3 = veorq_u8(s3, rk3);
+        rk0 = vld1q_u8(round_key);
+        rk1 = vld1q_u8(round_key + 16);
+        rk2 = vld1q_u8(round_key + 32);
+        rk3 = vld1q_u8(round_key + 48);
+
+        s0 = AES_DEC_LAST(s0, rk0);
+        s1 = AES_DEC_LAST(s1, rk1);
+        s2 = AES_DEC_LAST(s2, rk2);
+        s3 = AES_DEC_LAST(s3, rk3);
+
+        uint8x16_t rc = vld1q_u8(&ROUND_CONSTANTS[16 * (steps - i - 1)]);
+        s0 = veorq_u8(s0, rc);
+
+        inv_mixing_layer_512(&s0, &s1, &s2, &s3);
+
+        s0 = INV_MIX_COLUMNS(s0);
+        s1 = INV_MIX_COLUMNS(s1);
+        s2 = INV_MIX_COLUMNS(s2);
+        s3 = INV_MIX_COLUMNS(s3);
+
+        s0 = AES_DEC(s0, fk0);
+        s1 = AES_DEC(s1, fk1);
+        s2 = AES_DEC(s2, fk2);
+        s3 = AES_DEC(s3, fk3);
+    }
+
+    rotate_bytes(round_key, 11, 16);
+    rotate_bytes(round_key + 16, 6, 16);
+    rotate_bytes(round_key + 32, 11, 16);
+    rotate_bytes(round_key + 48, 6, 16);
+
+    rk0 = vld1q_u8(round_key);
+    rk1 = vld1q_u8(round_key + 16);
+    rk2 = vld1q_u8(round_key + 32);
+    rk3 = vld1q_u8(round_key + 48);
+
+    s0 = AES_DEC_LAST(s0, rk0);
+    s1 = AES_DEC_LAST(s1, rk1);
+    s2 = AES_DEC_LAST(s2, rk2);
+    s3 = AES_DEC_LAST(s3, rk3);
 
     vst1q_u8(plaintext, s0);
     vst1q_u8(plaintext + 16, s1);

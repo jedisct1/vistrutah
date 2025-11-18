@@ -120,6 +120,7 @@ aes_inv_final_round(__m128i state, __m128i round_key)
     return _mm_aesdeclast_si128(state, round_key);
 }
 
+#ifndef VISTRUTAH_VAES
 static void
 mixing_layer_256(__m128i* s0, __m128i* s1)
 {
@@ -136,6 +137,7 @@ mixing_layer_256(__m128i* s0, __m128i* s1)
     *s0 = _mm_loadu_si128((const __m128i*) result);
     *s1 = _mm_loadu_si128((const __m128i*) (result + 16));
 }
+#endif
 
 static void
 inv_mixing_layer_256(__m128i* s0, __m128i* s1)

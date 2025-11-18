@@ -568,11 +568,7 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
         __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
         s0         = _mm_xor_si128(s0, rc);
 
-#ifdef VISTRUTAH_VAES
         inv_mixing_layer_512_sse(&s0, &s1, &s2, &s3);
-#else
-        inv_mixing_layer_512_sse(&s0, &s1, &s2, &s3);
-#endif
 
         s0 = _mm_aesimc_si128(s0);
         s1 = _mm_aesimc_si128(s1);

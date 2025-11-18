@@ -76,22 +76,6 @@ typedef struct {
 } v512_t;
 #endif
 
-// State structures
-typedef struct {
-    v256_t state;
-} vistrutah_256_state_t;
-
-typedef struct {
-    v512_t state;
-} vistrutah_512_state_t;
-
-// Key schedule structures
-#define MAX_ROUNDS 18
-typedef struct {
-    v128_t round_keys[MAX_ROUNDS + 1];
-    v128_t inv_round_keys[MAX_ROUNDS + 1]; // For decryption
-} vistrutah_key_schedule_t;
-
 // Function prototypes
 void vistrutah_256_encrypt(const uint8_t* plaintext, uint8_t* ciphertext, const uint8_t* key,
                            int key_size, int rounds);

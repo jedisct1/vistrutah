@@ -4,7 +4,8 @@
 #include <string.h>
 #include <time.h>
 
-// Helper function to print hex bytes
+#define MAX_ROUNDS 18
+
 void
 print_hex(const char* label, const uint8_t* data, size_t len)
 {

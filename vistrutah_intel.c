@@ -208,40 +208,44 @@ vistrutah_256_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
 
     __m128i fk0 = _mm_loadu_si128((const __m128i*) fixed_key);
     __m128i fk1 = _mm_loadu_si128((const __m128i*) (fixed_key + 16));
+
+    __m128i fk0_imc = _mm_aesimc_si128(fk0);
+    __m128i fk1_imc = _mm_aesimc_si128(fk1);
+
     __m128i zero = _mm_setzero_si128();
 
     __m128i rk0 = _mm_loadu_si128((const __m128i*) round_keys[steps]);
     __m128i rk1 = _mm_loadu_si128((const __m128i*) (round_keys[steps] + 16));
 
-    s0 = aes_inv_final_round(s0, rk0);
-    s1 = aes_inv_final_round(s1, rk1);
+    s0 = _mm_xor_si128(s0, rk0);
+    s1 = _mm_xor_si128(s1, rk1);
+    s0 = aes_inv_round(s0, fk0_imc);
+    s1 = aes_inv_round(s1, fk1_imc);
 
     for (int i = steps - 1; i >= 1; i--) {
-        s0 = aes_inv_round(s0, fk0);
-        s1 = aes_inv_round(s1, fk1);
+        rk0 = _mm_loadu_si128((const __m128i*) round_keys[i]);
+        rk1 = _mm_loadu_si128((const __m128i*) (round_keys[i] + 16));
+
+        s0 = aes_inv_final_round(s0, rk0);
+        s1 = aes_inv_final_round(s1, rk1);
 
         __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
         s0 = _mm_xor_si128(s0, rc);
 
-        rk0 = _mm_loadu_si128((const __m128i*) round_keys[i]);
-        rk1 = _mm_loadu_si128((const __m128i*) (round_keys[i] + 16));
-
-        s0 = _mm_xor_si128(s0, rk0);
-        s1 = _mm_xor_si128(s1, rk1);
-
         inv_mixing_layer_256(&s0, &s1);
-        s0 = aes_inv_round(s0, zero);
-        s1 = aes_inv_round(s1, zero);
-    }
 
-    s0 = aes_inv_round(s0, fk0);
-    s1 = aes_inv_round(s1, fk1);
+        s0 = _mm_aesimc_si128(s0);
+        s1 = _mm_aesimc_si128(s1);
+
+        s0 = aes_inv_round(s0, fk0_imc);
+        s1 = aes_inv_round(s1, fk1_imc);
+    }
 
     rk0 = _mm_loadu_si128((const __m128i*) round_keys[0]);
     rk1 = _mm_loadu_si128((const __m128i*) (round_keys[0] + 16));
 
-    s0 = _mm_xor_si128(s0, rk0);
-    s1 = _mm_xor_si128(s1, rk1);
+    s0 = aes_inv_final_round(s0, rk0);
+    s1 = aes_inv_final_round(s1, rk1);
 
     _mm_storeu_si128((__m128i*) plaintext, s0);
     _mm_storeu_si128((__m128i*) (plaintext + 16), s1);

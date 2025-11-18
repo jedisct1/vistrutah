@@ -243,6 +243,12 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     __m128i fk1 = _mm_loadu_si128((const __m128i*) (fixed_key + 16));
     __m128i fk2 = _mm_loadu_si128((const __m128i*) (fixed_key + 32));
     __m128i fk3 = _mm_loadu_si128((const __m128i*) (fixed_key + 48));
+
+    __m128i fk0_imc = _mm_aesimc_si128(fk0);
+    __m128i fk1_imc = _mm_aesimc_si128(fk1);
+    __m128i fk2_imc = _mm_aesimc_si128(fk2);
+    __m128i fk3_imc = _mm_aesimc_si128(fk3);
+
     __m128i zero = _mm_setzero_si128();
 
     __m128i rk0 = _mm_loadu_si128((const __m128i*) round_keys[steps]);
@@ -250,52 +256,51 @@ vistrutah_512_decrypt(const uint8_t* ciphertext, uint8_t* plaintext, const uint8
     __m128i rk2 = _mm_loadu_si128((const __m128i*) (round_keys[steps] + 32));
     __m128i rk3 = _mm_loadu_si128((const __m128i*) (round_keys[steps] + 48));
 
-    s0 = aes_inv_final_round(s0, rk0);
-    s1 = aes_inv_final_round(s1, rk1);
-    s2 = aes_inv_final_round(s2, rk2);
-    s3 = aes_inv_final_round(s3, rk3);
+    s0 = _mm_xor_si128(s0, rk0);
+    s1 = _mm_xor_si128(s1, rk1);
+    s2 = _mm_xor_si128(s2, rk2);
+    s3 = _mm_xor_si128(s3, rk3);
+    s0 = aes_inv_round(s0, fk0_imc);
+    s1 = aes_inv_round(s1, fk1_imc);
+    s2 = aes_inv_round(s2, fk2_imc);
+    s3 = aes_inv_round(s3, fk3_imc);
 
     for (int i = steps - 1; i >= 1; i--) {
-        s0 = aes_inv_round(s0, fk0);
-        s1 = aes_inv_round(s1, fk1);
-        s2 = aes_inv_round(s2, fk2);
-        s3 = aes_inv_round(s3, fk3);
-
-        __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
-        s0 = _mm_xor_si128(s0, rc);
-
         rk0 = _mm_loadu_si128((const __m128i*) round_keys[i]);
         rk1 = _mm_loadu_si128((const __m128i*) (round_keys[i] + 16));
         rk2 = _mm_loadu_si128((const __m128i*) (round_keys[i] + 32));
         rk3 = _mm_loadu_si128((const __m128i*) (round_keys[i] + 48));
 
-        s0 = _mm_xor_si128(s0, rk0);
-        s1 = _mm_xor_si128(s1, rk1);
-        s2 = _mm_xor_si128(s2, rk2);
-        s3 = _mm_xor_si128(s3, rk3);
+        s0 = aes_inv_final_round(s0, rk0);
+        s1 = aes_inv_final_round(s1, rk1);
+        s2 = aes_inv_final_round(s2, rk2);
+        s3 = aes_inv_final_round(s3, rk3);
+
+        __m128i rc = _mm_loadu_si128((const __m128i*) &ROUND_CONSTANTS[16 * (i - 1)]);
+        s0 = _mm_xor_si128(s0, rc);
 
         inv_mixing_layer_512(&s0, &s1, &s2, &s3);
 
-        s0 = aes_inv_round(s0, zero);
-        s1 = aes_inv_round(s1, zero);
-        s2 = aes_inv_round(s2, zero);
-        s3 = aes_inv_round(s3, zero);
-    }
+        s0 = _mm_aesimc_si128(s0);
+        s1 = _mm_aesimc_si128(s1);
+        s2 = _mm_aesimc_si128(s2);
+        s3 = _mm_aesimc_si128(s3);
 
-    s0 = aes_inv_round(s0, fk0);
-    s1 = aes_inv_round(s1, fk1);
-    s2 = aes_inv_round(s2, fk2);
-    s3 = aes_inv_round(s3, fk3);
+        s0 = aes_inv_round(s0, fk0_imc);
+        s1 = aes_inv_round(s1, fk1_imc);
+        s2 = aes_inv_round(s2, fk2_imc);
+        s3 = aes_inv_round(s3, fk3_imc);
+    }
 
     rk0 = _mm_loadu_si128((const __m128i*) round_keys[0]);
     rk1 = _mm_loadu_si128((const __m128i*) (round_keys[0] + 16));
     rk2 = _mm_loadu_si128((const __m128i*) (round_keys[0] + 32));
     rk3 = _mm_loadu_si128((const __m128i*) (round_keys[0] + 48));
 
-    s0 = _mm_xor_si128(s0, rk0);
-    s1 = _mm_xor_si128(s1, rk1);
-    s2 = _mm_xor_si128(s2, rk2);
-    s3 = _mm_xor_si128(s3, rk3);
+    s0 = aes_inv_final_round(s0, rk0);
+    s1 = aes_inv_final_round(s1, rk1);
+    s2 = aes_inv_final_round(s2, rk2);
+    s3 = aes_inv_final_round(s3, rk3);
 
     _mm_storeu_si128((__m128i*) plaintext, s0);
     _mm_storeu_si128((__m128i*) (plaintext + 16), s1);

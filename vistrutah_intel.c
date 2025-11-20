@@ -60,16 +60,17 @@ mixing_layer_256(__m128i* s0, __m128i* s1)
     __m128i t0 = *s0;
     __m128i t1 = *s1;
 
-    const __m128i even_mask = _mm_set_epi8(14, 12, 10, 8, 6, 4, 2, 0, 14, 12, 10, 8, 6, 4, 2, 0);
-    const __m128i odd_mask  = _mm_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1);
+    // ASURA permutation: [0,2,4,...,30, 1,3,5,...,31]
+    // Step 1: Reorganize each slice to [evens, odds]
+    // Permutation: [0,2,4,6,8,10,12,14, 1,3,5,7,9,11,13,15]
+    const __m128i reorg_mask = _mm_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0);
 
-    __m128i s0_even = _mm_shuffle_epi8(t0, even_mask);
-    __m128i s1_even = _mm_shuffle_epi8(t1, even_mask);
-    __m128i s0_odd  = _mm_shuffle_epi8(t0, odd_mask);
-    __m128i s1_odd  = _mm_shuffle_epi8(t1, odd_mask);
+    t0 = _mm_shuffle_epi8(t0, reorg_mask);
+    t1 = _mm_shuffle_epi8(t1, reorg_mask);
 
-    *s0 = _mm_unpacklo_epi64(s0_even, s1_even);
-    *s1 = _mm_unpacklo_epi64(s0_odd, s1_odd);
+    // Step 2: Swap upper half of t0 with lower half of t1
+    *s0 = _mm_unpacklo_epi64(t0, t1);  // [s0_evens, s1_evens]
+    *s1 = _mm_unpackhi_epi64(t0, t1);  // [s0_odds, s1_odds]
 }
 
 static void
@@ -78,8 +79,16 @@ inv_mixing_layer_256(__m128i* s0, __m128i* s1)
     __m128i t0 = *s0;
     __m128i t1 = *s1;
 
-    *s0 = _mm_unpacklo_epi8(t0, t1);
-    *s1 = _mm_unpackhi_epi8(t0, t1);
+    // Step 1: Reverse the unpack operations to reconstruct [evens, odds] per slice
+    __m128i slice0 = _mm_unpacklo_epi64(t0, t1);  // [s0_evens, s0_odds]
+    __m128i slice1 = _mm_unpackhi_epi64(t0, t1);  // [s1_evens, s1_odds]
+
+    // Step 2: Apply inverse of reorganization permutation
+    // Inverse of [0,2,4,6,8,10,12,14, 1,3,5,7,9,11,13,15] is [0,8,1,9,2,10,3,11, 4,12,5,13,6,14,7,15]
+    const __m128i inv_reorg_mask = _mm_set_epi8(15, 7, 14, 6, 13, 5, 12, 4, 11, 3, 10, 2, 9, 1, 8, 0);
+
+    *s0 = _mm_shuffle_epi8(slice0, inv_reorg_mask);
+    *s1 = _mm_shuffle_epi8(slice1, inv_reorg_mask);
 }
 
 static void

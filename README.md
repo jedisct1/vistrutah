@@ -46,6 +46,8 @@ The AES rounds use standard operations (SubBytes, ShiftRows, MixColumns, AddRoun
 
 ### Key Schedule
 
+Vistrutah-512 expands a 32-byte key to `key || Ψ(key)` and uses a 64-byte key directly, as specified in Section 3.4 of the [paper](https://eprint.iacr.org/2025/976). This fixes the handling of 64-byte keys and changes their ciphertext compared with earlier versions.
+
 Vistrutah employs an alternating inline key schedule:
 
 - **Even rounds**: `K_{2i} = k_{i mod s} ⊕ RC[i]` (fixed round key)

@@ -512,6 +512,61 @@ reverse_bits(uint8_t byte)
     return result;
 }
 
+// Vectors from the reference implementation, adapted to use the paper's 64-byte key setup (Section 3.4, https://eprint.iacr.org/2025/976).
+static void
+test_vistrutah_512_full_key_vectors(void)
+{
+    const int rounds[] = { VISTRUTAH_512_ROUNDS_SHORT_512KEY, VISTRUTAH_512_ROUNDS_LONG_512KEY };
+    const uint8_t expected[2][64] = {
+        {
+            0x0C, 0x7E, 0x4D, 0x93, 0xEC, 0xEA, 0x24, 0x6B,
+            0x9F, 0xCB, 0xA6, 0x33, 0x1F, 0x2F, 0x31, 0xDA,
+            0x03, 0x34, 0x35, 0xC0, 0xDE, 0x5A, 0x46, 0x57,
+            0xFD, 0x9F, 0x72, 0x89, 0xF5, 0xB4, 0x8A, 0xDD,
+            0x2B, 0xA9, 0x91, 0x9D, 0xFB, 0x37, 0x99, 0xEE,
+            0xA8, 0x53, 0xD3, 0xE3, 0x51, 0x6B, 0xA8, 0x0F,
+            0x79, 0x5C, 0x7F, 0x13, 0x8B, 0xCA, 0xE3, 0x00,
+            0xA3, 0x2F, 0x12, 0xDD, 0x2E, 0xAF, 0xD0, 0x6D,
+        },
+        {
+            0x38, 0x3D, 0xEA, 0xDE, 0x95, 0x1E, 0x05, 0x94,
+            0x8F, 0xAD, 0x5E, 0x11, 0x90, 0x98, 0x54, 0xD4,
+            0xB3, 0x54, 0xCA, 0xDD, 0x06, 0xD4, 0xDC, 0x97,
+            0xA0, 0x60, 0xCF, 0x5C, 0x34, 0x50, 0xF7, 0xEE,
+            0x20, 0x6A, 0xFB, 0x26, 0x81, 0xD9, 0x82, 0x01,
+            0xDD, 0xB9, 0x36, 0x10, 0x36, 0x0D, 0x5A, 0x9B,
+            0x65, 0x46, 0xBE, 0xE5, 0xF6, 0x85, 0xD2, 0x44,
+            0x4D, 0xAD, 0x1F, 0xF0, 0xEA, 0xD1, 0xBC, 0x7A,
+        },
+    };
+    uint8_t key[64], plaintext[64], output[64];
+    for (int i = 0; i < 64; i++) {
+        key[i] = reverse_bits(i + 1);
+        plaintext[i] = i;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        for (int in_place = 0; in_place <= 1; in_place++) {
+            memcpy(output, plaintext, 64);
+            vistrutah_512_encrypt(in_place ? output : plaintext, output, key, 64, rounds[i]);
+            if (memcmp(output, expected[i], 64) != 0) {
+                printf("512-bit key encryption FAILED (%d rounds, in_place=%d)\n", rounds[i], in_place);
+                print_hex("Expected ", expected[i], 64);
+                print_hex("Got      ", output, 64);
+                exit(1);
+            }
+            memcpy(output, expected[i], 64);
+            vistrutah_512_decrypt(in_place ? output : expected[i], output, key, 64, rounds[i]);
+            if (memcmp(output, plaintext, 64) != 0) {
+                printf("512-bit key decryption FAILED (%d rounds, in_place=%d)\n", rounds[i], in_place);
+                print_hex("Expected ", plaintext, 64);
+                print_hex("Got      ", output, 64);
+                exit(1);
+            }
+        }
+    }
+    printf("512-bit key vectors passed\n");
+}
+
 // Test against reference implementation vectors
 void
 test_reference_vectors()
@@ -792,6 +847,7 @@ main()
 
     // FIRST: Test against reference implementation (fail fast if mismatched)
     test_reference_vectors();
+    test_vistrutah_512_full_key_vectors();
 
     // Basic functionality tests
     test_vistrutah_256();
